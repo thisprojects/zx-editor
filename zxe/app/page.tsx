@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { BsPencilFill, BsEraserFill } from 'react-icons/bs';
+import { TbLine } from 'react-icons/tb';
+import { IoClose, IoMenu } from 'react-icons/io5';
 
 // ZX Spectrum colour palette (0-7)
 const ZX_COLOURS = [
@@ -23,15 +26,17 @@ interface Attribute {
   bright: boolean;
 }
 
-// Default grid size: 8 characters wide x 4 characters tall (each char is 8x8 pixels)
-const DEFAULT_CHARS_WIDTH = 8;
-const DEFAULT_CHARS_HEIGHT = 4;
+// Default grid size: 7 characters wide x 3 characters tall (each char is 8x8 pixels)
+// Max 21 characters total (ZX Spectrum UDG limit)
+const DEFAULT_CHARS_WIDTH = 7;
+const DEFAULT_CHARS_HEIGHT = 3;
+const MAX_UDG_CHARS = 21;
 const CHAR_SIZE = 8; // pixels per character dimension
-const PIXEL_SIZE = 16; // display size of each pixel
+const DEFAULT_pixelSize = 10; // default display size of each pixel
 
 export default function Home() {
-  const [charsWidth] = useState(DEFAULT_CHARS_WIDTH);
-  const [charsHeight] = useState(DEFAULT_CHARS_HEIGHT);
+  const [charsWidth, setCharsWidth] = useState(DEFAULT_CHARS_WIDTH);
+  const [charsHeight, setCharsHeight] = useState(DEFAULT_CHARS_HEIGHT);
   const canvasWidth = charsWidth * CHAR_SIZE;
   const canvasHeight = charsHeight * CHAR_SIZE;
 
@@ -63,6 +68,8 @@ export default function Home() {
   const [fileName, setFileName] = useState('udg');
   const [showModal, setShowModal] = useState(false);
   const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
+  const [pixelSize, setPixelSize] = useState(DEFAULT_pixelSize);
+  const [toolbarOpen, setToolbarOpen] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +78,50 @@ export default function Home() {
   const getColourHex = (colourIndex: number, bright: boolean) => {
     return bright ? ZX_COLOURS[colourIndex].bright : ZX_COLOURS[colourIndex].normal;
   };
+
+  // Calculate bounding box of drawn content (in character cells)
+  const getDrawnBounds = useCallback(() => {
+    let minCharX = charsWidth;
+    let minCharY = charsHeight;
+    let maxCharX = -1;
+    let maxCharY = -1;
+
+    // Check each character cell for any drawn pixels
+    for (let charY = 0; charY < charsHeight; charY++) {
+      for (let charX = 0; charX < charsWidth; charX++) {
+        let hasPixels = false;
+        for (let py = 0; py < CHAR_SIZE && !hasPixels; py++) {
+          for (let px = 0; px < CHAR_SIZE && !hasPixels; px++) {
+            const pixelX = charX * CHAR_SIZE + px;
+            const pixelY = charY * CHAR_SIZE + py;
+            if (pixels[pixelY]?.[pixelX]) {
+              hasPixels = true;
+            }
+          }
+        }
+        if (hasPixels) {
+          minCharX = Math.min(minCharX, charX);
+          minCharY = Math.min(minCharY, charY);
+          maxCharX = Math.max(maxCharX, charX);
+          maxCharY = Math.max(maxCharY, charY);
+        }
+      }
+    }
+
+    if (maxCharX < 0) {
+      // Nothing drawn
+      return null;
+    }
+
+    return {
+      minCharX,
+      minCharY,
+      maxCharX,
+      maxCharY,
+      width: maxCharX - minCharX + 1,
+      height: maxCharY - minCharY + 1,
+    };
+  }, [pixels, charsWidth, charsHeight]);
 
   // Draw the canvas
   const drawCanvas = useCallback(() => {
@@ -94,7 +145,7 @@ export default function Home() {
             const isInk = pixels[pixelY][pixelX];
 
             ctx.fillStyle = isInk ? inkColour : paperColour;
-            ctx.fillRect(pixelX * PIXEL_SIZE, pixelY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+            ctx.fillRect(pixelX * pixelSize, pixelY * pixelSize, pixelSize, pixelSize);
           }
         }
       }
@@ -107,14 +158,14 @@ export default function Home() {
     // Pixel grid
     for (let x = 0; x <= canvasWidth; x++) {
       ctx.beginPath();
-      ctx.moveTo(x * PIXEL_SIZE, 0);
-      ctx.lineTo(x * PIXEL_SIZE, canvasHeight * PIXEL_SIZE);
+      ctx.moveTo(x * pixelSize, 0);
+      ctx.lineTo(x * pixelSize, canvasHeight * pixelSize);
       ctx.stroke();
     }
     for (let y = 0; y <= canvasHeight; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * PIXEL_SIZE);
-      ctx.lineTo(canvasWidth * PIXEL_SIZE, y * PIXEL_SIZE);
+      ctx.moveTo(0, y * pixelSize);
+      ctx.lineTo(canvasWidth * pixelSize, y * pixelSize);
       ctx.stroke();
     }
 
@@ -123,14 +174,14 @@ export default function Home() {
     ctx.lineWidth = 2;
     for (let x = 0; x <= charsWidth; x++) {
       ctx.beginPath();
-      ctx.moveTo(x * CHAR_SIZE * PIXEL_SIZE, 0);
-      ctx.lineTo(x * CHAR_SIZE * PIXEL_SIZE, canvasHeight * PIXEL_SIZE);
+      ctx.moveTo(x * CHAR_SIZE * pixelSize, 0);
+      ctx.lineTo(x * CHAR_SIZE * pixelSize, canvasHeight * pixelSize);
       ctx.stroke();
     }
     for (let y = 0; y <= charsHeight; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * CHAR_SIZE * PIXEL_SIZE);
-      ctx.lineTo(canvasWidth * PIXEL_SIZE, y * CHAR_SIZE * PIXEL_SIZE);
+      ctx.moveTo(0, y * CHAR_SIZE * pixelSize);
+      ctx.lineTo(canvasWidth * pixelSize, y * CHAR_SIZE * pixelSize);
       ctx.stroke();
     }
 
@@ -139,10 +190,10 @@ export default function Home() {
       const linePoints = getLinePoints(lineStart.x, lineStart.y, linePreview.x, linePreview.y);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       for (const point of linePoints) {
-        ctx.fillRect(point.x * PIXEL_SIZE + 2, point.y * PIXEL_SIZE + 2, PIXEL_SIZE - 4, PIXEL_SIZE - 4);
+        ctx.fillRect(point.x * pixelSize + 2, point.y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
       }
     }
-  }, [pixels, attributes, canvasHeight, canvasWidth, charsWidth, charsHeight, currentTool, lineStart, linePreview]);
+  }, [pixels, attributes, canvasHeight, canvasWidth, charsWidth, charsHeight, currentTool, lineStart, linePreview, pixelSize]);
 
   useEffect(() => {
     drawCanvas();
@@ -153,8 +204,8 @@ export default function Home() {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+    const x = Math.floor((e.clientX - rect.left) / pixelSize);
+    const y = Math.floor((e.clientY - rect.top) / pixelSize);
     if (x >= 0 && x < canvasWidth && y >= 0 && y < canvasHeight) {
       return { x, y };
     }
@@ -288,25 +339,55 @@ export default function Home() {
     setIsDrawing(false);
   };
 
-  // Export as ASM file (combined UDG and attribute data)
+  // Export as ASM file (compact, game-ready format)
   const exportASM = () => {
-    const lines: string[] = [];
-    const totalChars = charsWidth * charsHeight;
+    const bounds = getDrawnBounds();
+    if (!bounds) {
+      alert('Nothing to export - draw something first!');
+      return;
+    }
 
-    // Header comment
-    lines.push('; ZX Spectrum UDG Data');
-    lines.push(`; Generated by ZX Spectrum UDG Editor`);
-    lines.push(`; ${charsWidth}x${charsHeight} characters (${totalChars} total)`);
+    const { minCharX, minCharY, width: exportWidth, height: exportHeight } = bounds;
+    const totalChars = exportWidth * exportHeight;
+
+    if (totalChars > MAX_UDG_CHARS) {
+      alert(`Drawn content spans ${totalChars} characters, but ZX Spectrum only has ${MAX_UDG_CHARS} UDG slots. Please reduce the drawn area.`);
+      return;
+    }
+
+    const lines: string[] = [];
+
+    // Header
+    lines.push('; ZX Spectrum UDG Sprite Data');
+    lines.push('; Generated by ZX Spectrum UDG Editor');
+    lines.push(';');
+    lines.push(`; Sprite dimensions: ${exportWidth}x${exportHeight} characters (${exportWidth * 8}x${exportHeight * 8} pixels)`);
+    lines.push(`; Total characters: ${totalChars}`);
+    lines.push(`; UDG data size: ${totalChars * 8} bytes`);
+    lines.push(`; Attribute data size: ${totalChars} bytes`);
     lines.push('');
 
-    // UDG pixel data
-    lines.push('; UDG pixel data (8 bytes per character)');
-    lines.push('udg_data:');
+    // Constants
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('; Constants');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push(`SPRITE_WIDTH    equ ${exportWidth}          ; Width in characters`);
+    lines.push(`SPRITE_HEIGHT   equ ${exportHeight}          ; Height in characters`);
+    lines.push(`SPRITE_CHARS    equ ${totalChars}         ; Total characters`);
+    lines.push(`UDG_BYTES       equ ${totalChars * 8}        ; Bytes of UDG pixel data`);
+    lines.push(`FIRST_UDG_CHAR  equ 144         ; First UDG character code`);
+    lines.push('');
+
+    // UDG pixel data - compact format (8 bytes per line = 1 character)
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('; UDG Pixel Data (8 bytes per character, MSB=leftmost pixel)');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('sprite_udg_data:');
 
     let charIndex = 0;
-    for (let charY = 0; charY < charsHeight; charY++) {
-      for (let charX = 0; charX < charsWidth; charX++) {
-        lines.push(`        ; Character ${charIndex} (row ${charY}, col ${charX})`);
+    for (let charY = minCharY; charY < minCharY + exportHeight; charY++) {
+      for (let charX = minCharX; charX < minCharX + exportWidth; charX++) {
+        const bytes: string[] = [];
         for (let row = 0; row < CHAR_SIZE; row++) {
           let byte = 0;
           for (let col = 0; col < CHAR_SIZE; col++) {
@@ -316,9 +397,9 @@ export default function Home() {
               byte |= 1 << (7 - col);
             }
           }
-          const binary = byte.toString(2).padStart(8, '0');
-          lines.push(`        defb %${binary}`);
+          bytes.push(`$${byte.toString(16).padStart(2, '0').toUpperCase()}`);
         }
+        lines.push(`        defb ${bytes.join(',')}  ; char ${charIndex} (row ${charY - minCharY}, col ${charX - minCharX})`);
         charIndex++;
       }
     }
@@ -326,23 +407,125 @@ export default function Home() {
     lines.push('');
 
     // Attribute data
-    lines.push('; Attribute data (1 byte per character)');
-    lines.push('; Format: 0BPPPIII (B=bright, P=paper 0-7, I=ink 0-7)');
-    lines.push('udg_attr:');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('; Attribute Data (1 byte per character)');
+    lines.push('; Format: 0BPPPIII where B=bright, P=paper(0-7), I=ink(0-7)');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('sprite_attr_data:');
 
-    const attrBytes: string[] = [];
-    for (let charY = 0; charY < charsHeight; charY++) {
+    for (let charY = minCharY; charY < minCharY + exportHeight; charY++) {
       const rowAttrs: string[] = [];
-      for (let charX = 0; charX < charsWidth; charX++) {
+      for (let charX = minCharX; charX < minCharX + exportWidth; charX++) {
         const attr = attributes[charY][charX];
         const byte = (attr.bright ? 0x40 : 0) | (attr.paper << 3) | attr.ink;
         rowAttrs.push(`$${byte.toString(16).padStart(2, '0').toUpperCase()}`);
       }
-      lines.push(`        defb ${rowAttrs.join(', ')}  ; row ${charY}`);
+      lines.push(`        defb ${rowAttrs.join(',')}  ; row ${charY - minCharY}`);
     }
 
     lines.push('');
-    lines.push('; End of UDG data');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('; Usage Example');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push(';');
+    lines.push('; To use this sprite in your game:');
+    lines.push(';');
+    lines.push('; 1. Include this file in your project');
+    lines.push(';');
+    lines.push('; 2. Set up UDGs at startup:');
+    lines.push(';        ld hl,sprite_udg_data');
+    lines.push(';        ld (23675),hl           ; Set UDG system variable');
+    lines.push(';');
+    lines.push('; 3. Print sprite at screen position (row,col):');
+    lines.push(';        call print_sprite');
+    lines.push(';');
+    lines.push('; Or copy UDG data to a custom location:');
+    lines.push(';        ld hl,sprite_udg_data');
+    lines.push(';        ld de,your_udg_buffer');
+    lines.push(';        ld bc,UDG_BYTES');
+    lines.push(';        ldir');
+    lines.push('');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('; Helper Routines (optional - remove if not needed)');
+    lines.push('; -----------------------------------------------------------------------------');
+    lines.push('');
+    lines.push('; Print sprite at position (B=row, C=col)');
+    lines.push('; Modifies: AF, BC, DE, HL');
+    lines.push('print_sprite:');
+    lines.push('        ld d,SPRITE_HEIGHT');
+    lines.push('        ld e,FIRST_UDG_CHAR');
+    lines.push('_ps_row_loop:');
+    lines.push('        push bc');
+    lines.push('        push de');
+    lines.push('        ; Position cursor (AT row,col)');
+    lines.push('        ld a,22');
+    lines.push('        rst 16');
+    lines.push('        ld a,b');
+    lines.push('        rst 16');
+    lines.push('        ld a,c');
+    lines.push('        rst 16');
+    lines.push('        ; Print row of UDGs');
+    lines.push('        ld b,SPRITE_WIDTH');
+    lines.push('_ps_col_loop:');
+    lines.push('        ld a,e');
+    lines.push('        rst 16');
+    lines.push('        inc e');
+    lines.push('        djnz _ps_col_loop');
+    lines.push('        pop de');
+    lines.push('        pop bc');
+    lines.push('        ; Move to next row');
+    lines.push('        ld a,e');
+    lines.push('        add a,SPRITE_WIDTH');
+    lines.push('        ld e,a');
+    lines.push('        inc b');
+    lines.push('        dec d');
+    lines.push('        jr nz,_ps_row_loop');
+    lines.push('        ret');
+    lines.push('');
+    lines.push('; Set attributes for sprite at position (B=row, C=col)');
+    lines.push('; Modifies: AF, BC, DE, HL');
+    lines.push('set_sprite_attrs:');
+    lines.push('        ld hl,sprite_attr_data');
+    lines.push('        ld d,SPRITE_HEIGHT');
+    lines.push('_sa_row_loop:');
+    lines.push('        push bc');
+    lines.push('        push de');
+    lines.push('        ; Calculate attribute address: 22528 + row*32 + col');
+    lines.push('        ld a,b');
+    lines.push('        rrca');
+    lines.push('        rrca');
+    lines.push('        rrca');
+    lines.push('        ld e,a');
+    lines.push('        and $E0');
+    lines.push('        ld d,a');
+    lines.push('        ld a,e');
+    lines.push('        and $03');
+    lines.push('        or $58                  ; High byte of attr area');
+    lines.push('        ld d,a');
+    lines.push('        ld a,b');
+    lines.push('        rlca');
+    lines.push('        rlca');
+    lines.push('        rlca');
+    lines.push('        rlca');
+    lines.push('        rlca');
+    lines.push('        and $E0');
+    lines.push('        or c');
+    lines.push('        ld e,a');
+    lines.push('        ; Copy attribute row');
+    lines.push('        ld b,SPRITE_WIDTH');
+    lines.push('_sa_col_loop:');
+    lines.push('        ld a,(hl)');
+    lines.push('        ld (de),a');
+    lines.push('        inc hl');
+    lines.push('        inc e');
+    lines.push('        djnz _sa_col_loop');
+    lines.push('        pop de');
+    lines.push('        pop bc');
+    lines.push('        inc b');
+    lines.push('        dec d');
+    lines.push('        jr nz,_sa_row_loop');
+    lines.push('        ret');
+    lines.push('');
 
     const content = lines.join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
@@ -410,30 +593,53 @@ export default function Home() {
       try {
         const project = JSON.parse(event.target?.result as string);
 
-        if (project.pixels && Array.isArray(project.pixels)) {
-          const newPixels: boolean[][] = Array(canvasHeight)
-            .fill(null)
-            .map(() => Array(canvasWidth).fill(false));
+        // Determine canvas size from project or use defaults
+        const loadedWidth = project.charsWidth ?? DEFAULT_CHARS_WIDTH;
+        const loadedHeight = project.charsHeight ?? DEFAULT_CHARS_HEIGHT;
+        const totalChars = loadedWidth * loadedHeight;
 
-          for (let y = 0; y < Math.min(project.pixels.length, canvasHeight); y++) {
-            for (let x = 0; x < Math.min(project.pixels[y]?.length || 0, canvasWidth); x++) {
+        if (totalChars > MAX_UDG_CHARS) {
+          alert(`Project canvas size ${loadedWidth}x${loadedHeight} = ${totalChars} characters exceeds the maximum of ${MAX_UDG_CHARS} UDG characters.`);
+          return;
+        }
+
+        const loadedPixelWidth = loadedWidth * CHAR_SIZE;
+        const loadedPixelHeight = loadedHeight * CHAR_SIZE;
+
+        // Update canvas size
+        setCharsWidth(loadedWidth);
+        setCharsHeight(loadedHeight);
+
+        if (project.pixels && Array.isArray(project.pixels)) {
+          const newPixels: boolean[][] = Array(loadedPixelHeight)
+            .fill(null)
+            .map(() => Array(loadedPixelWidth).fill(false));
+
+          for (let y = 0; y < Math.min(project.pixels.length, loadedPixelHeight); y++) {
+            for (let x = 0; x < Math.min(project.pixels[y]?.length || 0, loadedPixelWidth); x++) {
               newPixels[y][x] = !!project.pixels[y][x];
             }
           }
           setPixels(newPixels);
+        } else {
+          setPixels(
+            Array(loadedPixelHeight)
+              .fill(null)
+              .map(() => Array(loadedPixelWidth).fill(false))
+          );
         }
 
         if (project.attributes && Array.isArray(project.attributes)) {
-          const newAttrs: Attribute[][] = Array(charsHeight)
+          const newAttrs: Attribute[][] = Array(loadedHeight)
             .fill(null)
             .map(() =>
-              Array(charsWidth)
+              Array(loadedWidth)
                 .fill(null)
                 .map(() => ({ ink: 7, paper: 0, bright: true }))
             );
 
-          for (let y = 0; y < Math.min(project.attributes.length, charsHeight); y++) {
-            for (let x = 0; x < Math.min(project.attributes[y]?.length || 0, charsWidth); x++) {
+          for (let y = 0; y < Math.min(project.attributes.length, loadedHeight); y++) {
+            for (let x = 0; x < Math.min(project.attributes[y]?.length || 0, loadedWidth); x++) {
               const attr = project.attributes[y][x];
               if (attr) {
                 newAttrs[y][x] = {
@@ -445,7 +651,20 @@ export default function Home() {
             }
           }
           setAttributes(newAttrs);
+        } else {
+          setAttributes(
+            Array(loadedHeight)
+              .fill(null)
+              .map(() =>
+                Array(loadedWidth)
+                  .fill(null)
+                  .map(() => ({ ink: 7, paper: 0, bright: true }))
+              )
+          );
         }
+
+        setLineStart(null);
+        setLinePreview(null);
       } catch (err) {
         console.error('Failed to load project file:', err);
         alert('Failed to load project file. Make sure it is a valid JSON project file.');
@@ -478,15 +697,92 @@ export default function Home() {
     setLinePreview(null);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center">ZX Spectrum UDG Editor</h1>
+  // Resize canvas (preserves existing content where possible)
+  const resizeCanvas = (newWidth: number, newHeight: number) => {
+    const totalChars = newWidth * newHeight;
+    if (totalChars > MAX_UDG_CHARS) {
+      alert(`Canvas size ${newWidth}x${newHeight} = ${totalChars} characters exceeds the maximum of ${MAX_UDG_CHARS} UDG characters.`);
+      return;
+    }
+    if (newWidth < 1 || newHeight < 1) {
+      return;
+    }
 
-        {/* Toolbar */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            {/* Tools */}
+    const newPixelWidth = newWidth * CHAR_SIZE;
+    const newPixelHeight = newHeight * CHAR_SIZE;
+
+    // Resize pixel array, preserving existing data
+    setPixels((prev) => {
+      const newPixels: boolean[][] = Array(newPixelHeight)
+        .fill(null)
+        .map(() => Array(newPixelWidth).fill(false));
+      for (let y = 0; y < Math.min(prev.length, newPixelHeight); y++) {
+        for (let x = 0; x < Math.min(prev[y]?.length || 0, newPixelWidth); x++) {
+          newPixels[y][x] = prev[y][x];
+        }
+      }
+      return newPixels;
+    });
+
+    // Resize attribute array, preserving existing data
+    setAttributes((prev) => {
+      const newAttrs: Attribute[][] = Array(newHeight)
+        .fill(null)
+        .map(() =>
+          Array(newWidth)
+            .fill(null)
+            .map(() => ({ ink: 7, paper: 0, bright: true }))
+        );
+      for (let y = 0; y < Math.min(prev.length, newHeight); y++) {
+        for (let x = 0; x < Math.min(prev[y]?.length || 0, newWidth); x++) {
+          newAttrs[y][x] = { ...prev[y][x] };
+        }
+      }
+      return newAttrs;
+    });
+
+    setCharsWidth(newWidth);
+    setCharsHeight(newHeight);
+    setLineStart(null);
+    setLinePreview(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Toggle button when toolbar is closed */}
+      {!toolbarOpen && (
+        <button
+          onClick={() => setToolbarOpen(true)}
+          className="fixed top-4 left-4 z-50 p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+          title="Open toolbar"
+        >
+          <IoMenu size={24} />
+        </button>
+      )}
+
+      {/* Left Toolbar */}
+      <div
+        className={`fixed top-0 left-0 h-full bg-gray-800 shadow-xl z-40 transition-transform duration-300 overflow-y-auto ${
+          toolbarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ width: '280px' }}
+      >
+        {/* Toolbar Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h1 className="text-lg font-bold">ZX UDG Editor</h1>
+          <button
+            onClick={() => setToolbarOpen(false)}
+            className="p-1 hover:bg-gray-700 rounded"
+            title="Close toolbar"
+          >
+            <IoClose size={24} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-6">
+          {/* Drawing Tools */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">Tools</div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -494,13 +790,14 @@ export default function Home() {
                   setLineStart(null);
                   setLinePreview(null);
                 }}
-                className={`px-4 py-2 rounded ${
+                className={`p-3 rounded ${
                   currentTool === 'pencil'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
+                title="Pencil"
               >
-                Pencil
+                <BsPencilFill size={20} />
               </button>
               <button
                 onClick={() => {
@@ -508,13 +805,14 @@ export default function Home() {
                   setLineStart(null);
                   setLinePreview(null);
                 }}
-                className={`px-4 py-2 rounded ${
+                className={`p-3 rounded ${
                   currentTool === 'line'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
+                title="Line"
               >
-                Line
+                <TbLine size={20} />
               </button>
               <button
                 onClick={() => {
@@ -522,109 +820,72 @@ export default function Home() {
                   setLineStart(null);
                   setLinePreview(null);
                 }}
-                className={`px-4 py-2 rounded ${
+                className={`p-3 rounded ${
                   currentTool === 'rubber'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
+                title="Rubber"
               >
-                Rubber
-              </button>
-            </div>
-
-            {/* File operations */}
-            <div className="flex gap-2 flex-wrap items-center">
-              <button
-                onClick={() => projectInputRef.current?.click()}
-                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600"
-              >
-                Load
-              </button>
-              <input
-                ref={projectInputRef}
-                type="file"
-                accept=".json"
-                onChange={loadProject}
-                className="hidden"
-              />
-              <button
-                onClick={() => openSaveModal('save')}
-                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => openSaveModal('export')}
-                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-500"
-              >
-                Export ASM
-              </button>
-              <button
-                onClick={clearCanvas}
-                className="px-4 py-2 rounded bg-red-700 text-white hover:bg-red-600"
-              >
-                Clear
+                <BsEraserFill size={20} />
               </button>
             </div>
           </div>
 
-          {/* Colour Palette */}
-          <div className="mt-4 flex flex-wrap gap-6">
-            {/* INK selector */}
-            <div>
-              <div className="text-sm text-gray-400 mb-2">INK Colour</div>
-              <div className="flex gap-1">
-                {ZX_COLOURS.map((colour, index) => (
-                  <button
-                    key={`ink-${index}`}
-                    onClick={() => setCurrentInk(index)}
-                    className={`w-8 h-8 rounded border-2 ${
-                      currentInk === index ? 'border-white' : 'border-gray-600'
-                    }`}
-                    style={{ backgroundColor: currentBright ? colour.bright : colour.normal }}
-                    title={colour.name}
-                  />
-                ))}
-              </div>
+          {/* INK selector */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">INK Colour</div>
+            <div className="flex gap-1 flex-wrap">
+              {ZX_COLOURS.map((colour, index) => (
+                <button
+                  key={`ink-${index}`}
+                  onClick={() => setCurrentInk(index)}
+                  className={`w-8 h-8 rounded border-2 ${
+                    currentInk === index ? 'border-white' : 'border-gray-600'
+                  }`}
+                  style={{ backgroundColor: currentBright ? colour.bright : colour.normal }}
+                  title={colour.name}
+                />
+              ))}
             </div>
+          </div>
 
-            {/* PAPER selector */}
-            <div>
-              <div className="text-sm text-gray-400 mb-2">PAPER Colour</div>
-              <div className="flex gap-1">
-                {ZX_COLOURS.map((colour, index) => (
-                  <button
-                    key={`paper-${index}`}
-                    onClick={() => setCurrentPaper(index)}
-                    className={`w-8 h-8 rounded border-2 ${
-                      currentPaper === index ? 'border-white' : 'border-gray-600'
-                    }`}
-                    style={{ backgroundColor: currentBright ? colour.bright : colour.normal }}
-                    title={colour.name}
-                  />
-                ))}
-              </div>
+          {/* PAPER selector */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">PAPER Colour</div>
+            <div className="flex gap-1 flex-wrap">
+              {ZX_COLOURS.map((colour, index) => (
+                <button
+                  key={`paper-${index}`}
+                  onClick={() => setCurrentPaper(index)}
+                  className={`w-8 h-8 rounded border-2 ${
+                    currentPaper === index ? 'border-white' : 'border-gray-600'
+                  }`}
+                  style={{ backgroundColor: currentBright ? colour.bright : colour.normal }}
+                  title={colour.name}
+                />
+              ))}
             </div>
+          </div>
 
-            {/* BRIGHT toggle */}
-            <div>
-              <div className="text-sm text-gray-400 mb-2">BRIGHT</div>
-              <button
-                onClick={() => setCurrentBright(!currentBright)}
-                className={`px-4 py-2 rounded ${
-                  currentBright
-                    ? 'bg-yellow-500 text-black'
-                    : 'bg-gray-700 text-gray-300'
-                }`}
-              >
-                {currentBright ? 'ON' : 'OFF'}
-              </button>
-            </div>
+          {/* BRIGHT toggle */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">BRIGHT</div>
+            <button
+              onClick={() => setCurrentBright(!currentBright)}
+              className={`px-4 py-2 rounded w-full ${
+                currentBright
+                  ? 'bg-yellow-500 text-black'
+                  : 'bg-gray-700 text-gray-300'
+              }`}
+            >
+              {currentBright ? 'ON' : 'OFF'}
+            </button>
           </div>
 
           {/* Current attribute preview */}
-          <div className="mt-4 flex items-center gap-4">
-            <span className="text-sm text-gray-400">Current Attribute:</span>
+          <div>
+            <div className="text-sm text-gray-400 mb-2">Current Attribute</div>
             <div className="flex items-center gap-2">
               <div
                 className="w-8 h-8 rounded border-2 border-white"
@@ -642,39 +903,127 @@ export default function Home() {
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Canvas */}
-        <div className="bg-gray-800 rounded-lg p-4 overflow-auto">
-          <canvas
-            ref={canvasRef}
-            width={canvasWidth * PIXEL_SIZE}
-            height={canvasHeight * PIXEL_SIZE}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            className="cursor-crosshair border border-gray-600"
-          />
-        </div>
+          {/* Canvas Size Controls */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">Canvas Size</div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={MAX_UDG_CHARS}
+                value={charsWidth}
+                onChange={(e) => {
+                  const newWidth = parseInt(e.target.value) || 1;
+                  resizeCanvas(newWidth, charsHeight);
+                }}
+                className="w-14 px-2 py-1 rounded bg-gray-700 text-white border border-gray-600 text-center"
+              />
+              <span className="text-gray-400">x</span>
+              <input
+                type="number"
+                min={1}
+                max={MAX_UDG_CHARS}
+                value={charsHeight}
+                onChange={(e) => {
+                  const newHeight = parseInt(e.target.value) || 1;
+                  resizeCanvas(charsWidth, newHeight);
+                }}
+                className="w-14 px-2 py-1 rounded bg-gray-700 text-white border border-gray-600 text-center"
+              />
+              <span className="text-xs text-gray-400">chars</span>
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              ({charsWidth * charsHeight}/{MAX_UDG_CHARS} UDGs)
+            </div>
+          </div>
 
-        {/* Info */}
-        <div className="mt-4 text-sm text-gray-400 text-center">
-          <p>
-            Canvas: {charsWidth}x{charsHeight} characters ({canvasWidth}x{canvasHeight} pixels)
-          </p>
-          <p className="mt-1">
-            {currentTool === 'line' && lineStart
-              ? 'Click to set line end point'
-              : currentTool === 'line'
-              ? 'Click to set line start point'
-              : currentTool === 'pencil'
-              ? 'Click and drag to draw (sets INK/PAPER/BRIGHT for cell)'
-              : 'Click and drag to erase (sets pixel to PAPER)'}
-          </p>
-          <p className="mt-2 text-xs">
-            Each 8x8 cell has one INK, PAPER, and BRIGHT setting (authentic ZX Spectrum colour clash)
-          </p>
+          {/* Scale Control */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">Scale: {pixelSize}x</div>
+            <input
+              type="range"
+              min={2}
+              max={20}
+              value={pixelSize}
+              onChange={(e) => setPixelSize(parseInt(e.target.value))}
+              className="w-full accent-blue-500"
+            />
+          </div>
+
+          {/* File operations */}
+          <div>
+            <div className="text-sm text-gray-400 mb-2">File</div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => projectInputRef.current?.click()}
+                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600 w-full"
+              >
+                Load
+              </button>
+              <input
+                ref={projectInputRef}
+                type="file"
+                accept=".json"
+                onChange={loadProject}
+                className="hidden"
+              />
+              <button
+                onClick={() => openSaveModal('save')}
+                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600 w-full"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => openSaveModal('export')}
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-500 w-full"
+              >
+                Export ASM
+              </button>
+              <button
+                onClick={clearCanvas}
+                className="px-4 py-2 rounded bg-red-700 text-white hover:bg-red-600 w-full"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Canvas Area */}
+      <div
+        className={`min-h-screen transition-all duration-300 ${
+          toolbarOpen ? 'ml-[280px]' : 'ml-0'
+        }`}
+      >
+        <div className="p-4 h-screen flex flex-col">
+          {/* Canvas */}
+          <div className="flex-1 bg-gray-800 rounded-lg p-4 overflow-auto flex items-center justify-center">
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth * pixelSize}
+              height={canvasHeight * pixelSize}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              className="cursor-crosshair border border-gray-600"
+            />
+          </div>
+
+          {/* Info */}
+          <div className="mt-2 text-sm text-gray-400 text-center">
+            <p>
+              {currentTool === 'line' && lineStart
+                ? 'Click to set line end point'
+                : currentTool === 'line'
+                ? 'Click to set line start point'
+                : currentTool === 'pencil'
+                ? 'Click and drag to draw'
+                : 'Click and drag to erase'}
+            </p>
+          </div>
         </div>
       </div>
 
