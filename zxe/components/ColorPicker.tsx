@@ -7,13 +7,14 @@ interface ColorPickerProps {
   selectedIndex: number;
   onSelect: (index: number) => void;
   bright: boolean;
+  vertical?: boolean;
 }
 
-export function ColorPicker({ label, selectedIndex, onSelect, bright }: ColorPickerProps) {
+export function ColorPicker({ label, selectedIndex, onSelect, bright, vertical = false }: ColorPickerProps) {
   return (
     <div>
       <div className="text-sm text-gray-400 mb-2">{label}</div>
-      <div className="flex gap-1 flex-wrap">
+      <div className={vertical ? 'flex flex-col gap-1' : 'flex gap-1 flex-wrap'}>
         {ZX_COLOURS.map((colour, index) => (
           <button
             key={`${label}-${index}`}

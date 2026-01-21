@@ -9,8 +9,6 @@ describe('Toolbar component', () => {
     onSelectTool: jest.fn(),
     currentInk: 7,
     onInkChange: jest.fn(),
-    currentPaper: 0,
-    onPaperChange: jest.fn(),
     currentBright: true,
     onBrightChange: jest.fn(),
     charsWidth: 7,
@@ -103,90 +101,53 @@ describe('Toolbar component', () => {
     });
   });
 
-  describe('color pickers', () => {
-    it('should render INK Colour picker', () => {
+  describe('color picker', () => {
+    it('should render Colour picker', () => {
       const props = createDefaultProps();
       render(<Toolbar {...props} />);
-      expect(screen.getByText('INK Colour')).toBeInTheDocument();
+      expect(screen.getByText('Colour')).toBeInTheDocument();
     });
 
-    it('should render PAPER Colour picker', () => {
+    it('should call onInkChange when colour is selected', () => {
       const props = createDefaultProps();
       render(<Toolbar {...props} />);
-      expect(screen.getByText('PAPER Colour')).toBeInTheDocument();
-    });
-
-    it('should call onInkChange when ink colour is selected', () => {
-      const props = createDefaultProps();
-      render(<Toolbar {...props} />);
-      // Find all Red buttons (one for INK, one for PAPER)
-      const redButtons = screen.getAllByTitle('Red');
-      fireEvent.click(redButtons[0]); // First one is INK
+      const redButton = screen.getByTitle('Red');
+      fireEvent.click(redButton);
       expect(props.onInkChange).toHaveBeenCalledWith(2);
-    });
-
-    it('should call onPaperChange when paper colour is selected', () => {
-      const props = createDefaultProps();
-      render(<Toolbar {...props} />);
-      const blueButtons = screen.getAllByTitle('Blue');
-      fireEvent.click(blueButtons[1]); // Second one is PAPER
-      expect(props.onPaperChange).toHaveBeenCalledWith(1);
     });
   });
 
   describe('bright toggle', () => {
-    it('should show BRIGHT ON when bright is true', () => {
+    it('should show bright toggle with yellow background when bright is true', () => {
       const props = createDefaultProps();
       props.currentBright = true;
       render(<Toolbar {...props} />);
-      const brightButton = screen.getByRole('button', { name: 'ON' });
-      expect(brightButton).toHaveClass('bg-yellow-500');
+      const brightToggle = screen.getByTitle('Toggle bright');
+      expect(brightToggle).toHaveClass('bg-yellow-500');
     });
 
-    it('should show BRIGHT OFF when bright is false', () => {
+    it('should show bright toggle with gray background when bright is false', () => {
       const props = createDefaultProps();
       props.currentBright = false;
       render(<Toolbar {...props} />);
-      const brightButton = screen.getByRole('button', { name: 'OFF' });
-      expect(brightButton).toHaveClass('bg-gray-700');
+      const brightToggle = screen.getByTitle('Toggle bright');
+      expect(brightToggle).toHaveClass('bg-gray-600');
     });
 
     it('should call onBrightChange when toggled', () => {
       const props = createDefaultProps();
       props.currentBright = true;
       render(<Toolbar {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'ON' }));
+      fireEvent.click(screen.getByTitle('Toggle bright'));
       expect(props.onBrightChange).toHaveBeenCalledWith(false);
     });
   });
 
-  describe('current attribute preview', () => {
-    it('should show Current Attribute section', () => {
-      const props = createDefaultProps();
-      render(<Toolbar {...props} />);
-      expect(screen.getByText('Current Attribute')).toBeInTheDocument();
-    });
-
-    it('should show BRIGHT indicator when bright', () => {
-      const props = createDefaultProps();
-      props.currentBright = true;
-      render(<Toolbar {...props} />);
-      expect(screen.getByText('(BRIGHT)')).toBeInTheDocument();
-    });
-
-    it('should show NORMAL indicator when not bright', () => {
-      const props = createDefaultProps();
-      props.currentBright = false;
-      render(<Toolbar {...props} />);
-      expect(screen.getByText('(NORMAL)')).toBeInTheDocument();
-    });
-  });
-
   describe('canvas size controls', () => {
-    it('should show Canvas Size section', () => {
+    it('should show Size section', () => {
       const props = createDefaultProps();
       render(<Toolbar {...props} />);
-      expect(screen.getByText('Canvas Size')).toBeInTheDocument();
+      expect(screen.getByText('Size')).toBeInTheDocument();
     });
 
     it('should show current dimensions', () => {
@@ -220,7 +181,7 @@ describe('Toolbar component', () => {
       props.charsWidth = 7;
       props.charsHeight = 3;
       render(<Toolbar {...props} />);
-      expect(screen.getByText('(21/21 UDGs)')).toBeInTheDocument();
+      expect(screen.getByText('21/21')).toBeInTheDocument();
     });
   });
 
@@ -229,7 +190,8 @@ describe('Toolbar component', () => {
       const props = createDefaultProps();
       props.pixelSize = 10;
       render(<Toolbar {...props} />);
-      expect(screen.getByText('Scale: 10x')).toBeInTheDocument();
+      expect(screen.getByText('Scale')).toBeInTheDocument();
+      expect(screen.getByText('10x')).toBeInTheDocument();
     });
 
     it('should call onPixelSizeChange when slider changes', () => {
@@ -262,10 +224,10 @@ describe('Toolbar component', () => {
       expect(props.onSave).toHaveBeenCalled();
     });
 
-    it('should call onExport when Export ASM button clicked', () => {
+    it('should call onExport when Export button clicked', () => {
       const props = createDefaultProps();
       render(<Toolbar {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
       expect(props.onExport).toHaveBeenCalled();
     });
 
@@ -290,10 +252,10 @@ describe('Toolbar component', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('bg-green-700');
     });
 
-    it('should have yellow styling for Export ASM button', () => {
+    it('should have yellow styling for Export button', () => {
       const props = createDefaultProps();
       render(<Toolbar {...props} />);
-      expect(screen.getByRole('button', { name: 'Export ASM' })).toHaveClass('bg-yellow-600');
+      expect(screen.getByRole('button', { name: 'Export' })).toHaveClass('bg-yellow-600');
     });
 
     it('should have red styling for Clear button', () => {

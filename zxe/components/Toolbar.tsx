@@ -1,7 +1,7 @@
 'use client';
 
 import { Tool } from '@/types';
-import { BsPencilFill, BsEraserFill } from 'react-icons/bs';
+import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine } from 'react-icons/tb';
 import { IoClose, IoMenu } from 'react-icons/io5';
 import { ColorPicker } from './ColorPicker';
@@ -15,8 +15,6 @@ interface ToolbarProps {
   onSelectTool: (tool: Tool) => void;
   currentInk: number;
   onInkChange: (ink: number) => void;
-  currentPaper: number;
-  onPaperChange: (paper: number) => void;
   currentBright: boolean;
   onBrightChange: (bright: boolean) => void;
   charsWidth: number;
@@ -37,8 +35,6 @@ export function Toolbar({
   onSelectTool,
   currentInk,
   onInkChange,
-  currentPaper,
-  onPaperChange,
   currentBright,
   onBrightChange,
   charsWidth,
@@ -69,7 +65,6 @@ export function Toolbar({
         className={`fixed top-0 left-0 h-full bg-gray-800 shadow-xl z-40 transition-transform duration-300 overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ width: '280px' }}
       >
         {/* Toolbar Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -83,171 +78,168 @@ export function Toolbar({
           </button>
         </div>
 
-        <div className="p-4 space-y-6">
-          {/* Drawing Tools */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">Tools</div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onSelectTool('pencil')}
-                className={`p-3 rounded ${
-                  currentTool === 'pencil'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                title="Pencil"
-              >
-                <BsPencilFill size={20} />
-              </button>
-              <button
-                onClick={() => onSelectTool('line')}
-                className={`p-3 rounded ${
-                  currentTool === 'line'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                title="Line"
-              >
-                <TbLine size={20} />
-              </button>
-              <button
-                onClick={() => onSelectTool('rubber')}
-                className={`p-3 rounded ${
-                  currentTool === 'rubber'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                title="Rubber"
-              >
-                <BsEraserFill size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* INK selector */}
-          <ColorPicker
-            label="INK Colour"
-            selectedIndex={currentInk}
-            onSelect={onInkChange}
-            bright={currentBright}
-          />
-
-          {/* PAPER selector */}
-          <ColorPicker
-            label="PAPER Colour"
-            selectedIndex={currentPaper}
-            onSelect={onPaperChange}
-            bright={currentBright}
-          />
-
-          {/* BRIGHT toggle */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">BRIGHT</div>
-            <button
-              onClick={() => onBrightChange(!currentBright)}
-              className={`px-4 py-2 rounded w-full ${
-                currentBright
-                  ? 'bg-yellow-500 text-black'
-                  : 'bg-gray-700 text-gray-300'
-              }`}
-            >
-              {currentBright ? 'ON' : 'OFF'}
-            </button>
-          </div>
-
-          {/* Current attribute preview */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">Current Attribute</div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded border-2 border-white"
-                style={{ backgroundColor: getColourHex(currentInk, currentBright) }}
-                title="INK"
+        <div className="p-4 pr-5 space-y-4">
+          {/* Colour palette, tools, and settings in horizontal layout */}
+          <div className="flex gap-3">
+            {/* Vertical Colour Picker */}
+            <div className="border border-gray-600 rounded p-2">
+              <ColorPicker
+                label="Colour"
+                selectedIndex={currentInk}
+                onSelect={onInkChange}
+                bright={currentBright}
+                vertical
               />
-              <span className="text-xs text-gray-400">on</span>
-              <div
-                className="w-8 h-8 rounded border-2 border-white"
-                style={{ backgroundColor: getColourHex(currentPaper, currentBright) }}
-                title="PAPER"
-              />
-              <span className="text-xs text-gray-400 ml-2">
-                ({currentBright ? 'BRIGHT' : 'NORMAL'})
-              </span>
             </div>
-          </div>
 
-          {/* Canvas Size Controls */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">Canvas Size</div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                max={MAX_UDG_CHARS}
-                value={charsWidth}
-                onChange={(e) => {
-                  const newWidth = parseInt(e.target.value) || 1;
-                  onResize(newWidth, charsHeight);
-                }}
-                className="w-14 px-2 py-1 rounded bg-gray-700 text-white border border-gray-600 text-center"
-              />
-              <span className="text-gray-400">x</span>
-              <input
-                type="number"
-                min={1}
-                max={MAX_UDG_CHARS}
-                value={charsHeight}
-                onChange={(e) => {
-                  const newHeight = parseInt(e.target.value) || 1;
-                  onResize(charsWidth, newHeight);
-                }}
-                className="w-14 px-2 py-1 rounded bg-gray-700 text-white border border-gray-600 text-center"
-              />
-              <span className="text-xs text-gray-400">chars</span>
-            </div>
-            <div className="text-xs text-gray-400 mt-1">
-              ({charsWidth * charsHeight}/{MAX_UDG_CHARS} UDGs)
-            </div>
-          </div>
+            {/* Tools and settings wrapper */}
+            <div className="flex flex-col">
+              <div className="flex gap-2">
+                {/* Drawing Tools column */}
+                <div className="border border-gray-600 rounded p-2">
+                  <div className="text-xs text-gray-400 mb-1">Tools</div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => onSelectTool('pencil')}
+                      className={`p-2 rounded ${
+                        currentTool === 'pencil'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                      title="Pencil"
+                    >
+                      <BsPencilFill size={16} />
+                    </button>
+                    <button
+                      onClick={() => onSelectTool('line')}
+                      className={`p-2 rounded ${
+                        currentTool === 'line'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                      title="Line"
+                    >
+                      <TbLine size={16} />
+                    </button>
+                    <button
+                      onClick={() => onSelectTool('rubber')}
+                      className={`p-2 rounded ${
+                        currentTool === 'rubber'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                      title="Rubber"
+                    >
+                      <BsEraserFill size={16} />
+                    </button>
+                    <button
+                      onClick={() => onSelectTool('bucket')}
+                      className={`p-2 rounded ${
+                        currentTool === 'bucket'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                      title="Bucket Fill (Paper)"
+                    >
+                      <BsPaintBucket size={16} />
+                    </button>
+                  </div>
+                </div>
 
-          {/* Scale Control */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">Scale: {pixelSize}x</div>
-            <input
-              type="range"
-              min={2}
-              max={20}
-              value={pixelSize}
-              onChange={(e) => onPixelSizeChange(parseInt(e.target.value))}
-              className="w-full accent-blue-500"
-            />
+                {/* Settings column - stretches to match tools height */}
+                <div className="border border-gray-600 rounded p-2 flex flex-col">
+                  {/* BRIGHT toggle */}
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-400 mb-1">Bright</div>
+                    <button
+                      onClick={() => onBrightChange(!currentBright)}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${
+                        currentBright ? 'bg-yellow-500' : 'bg-gray-600'
+                      }`}
+                      title="Toggle bright"
+                    >
+                      <div
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          currentBright ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Canvas Size */}
+                  <div className="mt-auto">
+                    <div className="text-xs text-gray-400 mb-1">Size</div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={MAX_UDG_CHARS}
+                        value={charsWidth}
+                        onChange={(e) => {
+                          const newWidth = parseInt(e.target.value) || 1;
+                          onResize(newWidth, charsHeight);
+                        }}
+                        className="w-8 px-1 py-0.5 rounded bg-gray-700 text-white border border-gray-600 text-center text-xs"
+                      />
+                      <span className="text-gray-400 text-xs">x</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={MAX_UDG_CHARS}
+                        value={charsHeight}
+                        onChange={(e) => {
+                          const newHeight = parseInt(e.target.value) || 1;
+                          onResize(charsWidth, newHeight);
+                        }}
+                        className="w-8 px-1 py-0.5 rounded bg-gray-700 text-white border border-gray-600 text-center text-xs"
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{charsWidth * charsHeight}/{MAX_UDG_CHARS}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scale Control - matches width of columns above */}
+              <div className="border border-gray-600 rounded p-2 mt-2">
+                <div className="text-xs text-gray-400 mb-1">Scale</div>
+                <input
+                  type="range"
+                  min={2}
+                  max={20}
+                  value={pixelSize}
+                  onChange={(e) => onPixelSizeChange(parseInt(e.target.value))}
+                  className="w-full accent-blue-500 h-1"
+                />
+                <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
+              </div>
+            </div>
           </div>
 
           {/* File operations */}
-          <div>
-            <div className="text-sm text-gray-400 mb-2">File</div>
-            <div className="flex flex-col gap-2">
+          <div className="border border-gray-600 rounded p-2">
+            <div className="text-xs text-gray-400 mb-1">File</div>
+            <div className="flex flex-col gap-1">
               <button
                 onClick={onLoad}
-                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600 w-full"
+                className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 text-xs"
               >
                 Load
               </button>
               <button
                 onClick={onSave}
-                className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-600 w-full"
+                className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 text-xs"
               >
                 Save
               </button>
               <button
                 onClick={onExport}
-                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-500 w-full"
+                className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
               >
-                Export ASM
+                Export
               </button>
               <button
                 onClick={onClear}
-                className="px-4 py-2 rounded bg-red-700 text-white hover:bg-red-600 w-full"
+                className="px-2 py-1 rounded bg-red-700 text-white hover:bg-red-600 text-xs"
               >
                 Clear
               </button>

@@ -1,4 +1,4 @@
-export type Tool = 'pencil' | 'line' | 'rubber';
+export type Tool = 'pencil' | 'line' | 'rubber' | 'bucket';
 
 // Attribute byte structure (per 8x8 character cell)
 export interface Attribute {

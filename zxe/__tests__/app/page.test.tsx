@@ -111,8 +111,8 @@ describe('Home page', () => {
 
     it('should open export modal when Export ASM is clicked', () => {
       render(<Home />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
-      // There are two "Export ASM" texts - button and modal heading
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      // Modal heading says "Export ASM"
       expect(screen.getByRole('heading', { name: 'Export ASM' })).toBeInTheDocument();
     });
 
@@ -152,7 +152,7 @@ describe('Home page', () => {
     it('should have correct margin when toolbar is open', () => {
       render(<Home />);
       const mainArea = document.querySelector('.min-h-screen.transition-all');
-      expect(mainArea).toHaveClass('ml-[280px]');
+      expect(mainArea).toHaveClass('ml-[220px]');
     });
 
     it('should have no margin when toolbar is closed', () => {
@@ -206,7 +206,7 @@ describe('Home page', () => {
       render(<Home />);
       const slider = screen.getByRole('slider');
       fireEvent.change(slider, { target: { value: '15' } });
-      expect(screen.getByText('Scale: 15x')).toBeInTheDocument();
+      expect(screen.getByText('15x')).toBeInTheDocument();
     });
   });
 
@@ -235,14 +235,18 @@ describe('Home page', () => {
   describe('export modal', () => {
     it('should show Export button in export modal', () => {
       render(<Home />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
-      expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      // There are now two Export buttons - toolbar and modal
+      const exportButtons = screen.getAllByRole('button', { name: 'Export' });
+      expect(exportButtons.length).toBe(2);
     });
 
     it('should close export modal on confirm', () => {
       render(<Home />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      // Click the modal's Export button (last one)
+      const exportButtons = screen.getAllByRole('button', { name: 'Export' });
+      fireEvent.click(exportButtons[exportButtons.length - 1]);
       expect(screen.queryByRole('heading', { name: 'Export ASM' })).not.toBeInTheDocument();
     });
   });

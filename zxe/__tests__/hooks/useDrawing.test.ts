@@ -47,7 +47,6 @@ describe('useDrawing hook', () => {
       const { result } = renderHook(() => useDrawing());
 
       expect(result.current.currentInk).toBe(7);
-      expect(result.current.currentPaper).toBe(0);
       expect(result.current.currentBright).toBe(true);
     });
 
@@ -96,7 +95,6 @@ describe('useDrawing hook', () => {
 
       act(() => {
         result.current.setCurrentInk(3);
-        result.current.setCurrentPaper(5);
         result.current.setCurrentBright(false);
       });
 
@@ -104,9 +102,10 @@ describe('useDrawing hook', () => {
         result.current.setPixel(0, 0, true);
       });
 
+      // setPixel updates ink and bright, but preserves existing paper (default 0)
       expect(result.current.attributes[0][0]).toEqual({
         ink: 3,
-        paper: 5,
+        paper: 0,
         bright: false,
       });
     });
@@ -503,16 +502,6 @@ describe('useDrawing hook', () => {
       });
 
       expect(result.current.currentInk).toBe(5);
-    });
-
-    it('should update currentPaper', () => {
-      const { result } = renderHook(() => useDrawing());
-
-      act(() => {
-        result.current.setCurrentPaper(3);
-      });
-
-      expect(result.current.currentPaper).toBe(3);
     });
 
     it('should update currentBright', () => {

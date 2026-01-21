@@ -21,6 +21,7 @@ interface CanvasProps {
   onDrawLine: (start: Point, end: Point) => void;
   onSetLineStart: (point: Point | null) => void;
   onSetLinePreview: (point: Point | null) => void;
+  onBucketFill: (x: number, y: number) => void;
 }
 
 export function Canvas({
@@ -38,6 +39,7 @@ export function Canvas({
   onDrawLine,
   onSetLineStart,
   onSetLinePreview,
+  onBucketFill,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -153,6 +155,8 @@ export function Canvas({
         onSetLineStart(null);
         onSetLinePreview(null);
       }
+    } else if (currentTool === 'bucket') {
+      onBucketFill(coords.x, coords.y);
     }
   };
 
@@ -185,6 +189,8 @@ export function Canvas({
       return 'Click to set line start point';
     } else if (currentTool === 'pencil') {
       return 'Click and drag to draw';
+    } else if (currentTool === 'bucket') {
+      return 'Click to fill cell paper colour';
     }
     return 'Click and drag to erase';
   };

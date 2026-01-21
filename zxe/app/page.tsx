@@ -59,8 +59,6 @@ export default function Home() {
         onSelectTool={drawing.selectTool}
         currentInk={drawing.currentInk}
         onInkChange={drawing.setCurrentInk}
-        currentPaper={drawing.currentPaper}
-        onPaperChange={drawing.setCurrentPaper}
         currentBright={drawing.currentBright}
         onBrightChange={drawing.setCurrentBright}
         charsWidth={drawing.charsWidth}
@@ -86,7 +84,7 @@ export default function Home() {
       {/* Main Canvas Area */}
       <div
         className={`min-h-screen transition-all duration-300 ${
-          toolbarOpen ? 'ml-[280px]' : 'ml-0'
+          toolbarOpen ? 'ml-[220px]' : 'ml-0'
         }`}
       >
         <Canvas
@@ -104,6 +102,7 @@ export default function Home() {
           onDrawLine={drawing.drawLine}
           onSetLineStart={drawing.setLineStart}
           onSetLinePreview={drawing.setLinePreview}
+          onBucketFill={drawing.bucketFill}
         />
       </div>
 

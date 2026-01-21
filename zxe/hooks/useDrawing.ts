@@ -35,7 +35,6 @@ export function useDrawing({
   );
 
   const [currentInk, setCurrentInk] = useState(7);
-  const [currentPaper, setCurrentPaper] = useState(0);
   const [currentBright, setCurrentBright] = useState(true);
   const [currentTool, setCurrentTool] = useState<Tool>('pencil');
   const [isDrawing, setIsDrawing] = useState(false);
@@ -54,18 +53,19 @@ export function useDrawing({
     });
 
     // Update attribute for this character cell when drawing (not erasing)
+    // Only update ink and bright, preserve the existing paper colour
     if (isInk) {
       setAttributes((prev) => {
         const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
         newAttrs[charY][charX] = {
+          ...newAttrs[charY][charX],
           ink: currentInk,
-          paper: currentPaper,
           bright: currentBright,
         };
         return newAttrs;
       });
     }
-  }, [currentInk, currentPaper, currentBright]);
+  }, [currentInk, currentBright]);
 
   // Draw a line between two points
   const drawLine = useCallback((start: Point, end: Point) => {
@@ -84,19 +84,36 @@ export function useDrawing({
     });
 
     // Update attributes for all affected cells
+    // Only update ink and bright, preserve the existing paper colour
     setAttributes((prev) => {
       const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
       affectedCells.forEach((key) => {
         const [charX, charY] = key.split(',').map(Number);
         newAttrs[charY][charX] = {
+          ...newAttrs[charY][charX],
           ink: currentInk,
-          paper: currentPaper,
           bright: currentBright,
         };
       });
       return newAttrs;
     });
-  }, [currentInk, currentPaper, currentBright]);
+  }, [currentInk, currentBright]);
+
+  // Bucket fill: set paper colour for the 8x8 cell at given pixel coordinates
+  const bucketFill = useCallback((x: number, y: number) => {
+    const charX = Math.floor(x / CHAR_SIZE);
+    const charY = Math.floor(y / CHAR_SIZE);
+
+    setAttributes((prev) => {
+      const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
+      newAttrs[charY][charX] = {
+        ...newAttrs[charY][charX],
+        paper: currentInk,
+        bright: currentBright,
+      };
+      return newAttrs;
+    });
+  }, [currentInk, currentBright]);
 
   // Select a tool
   const selectTool = useCallback((tool: Tool) => {
@@ -198,8 +215,6 @@ export function useDrawing({
     // Current drawing state
     currentInk,
     setCurrentInk,
-    currentPaper,
-    setCurrentPaper,
     currentBright,
     setCurrentBright,
     currentTool,
@@ -216,6 +231,7 @@ export function useDrawing({
     // Actions
     setPixel,
     drawLine,
+    bucketFill,
     clearCanvas,
     resizeCanvas,
     loadProjectData,
