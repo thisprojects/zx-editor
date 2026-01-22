@@ -51,7 +51,7 @@ export function useProject({
 
   // Export as ASM
   const handleExportASM = useCallback(() => {
-    const bounds = getDrawnBounds(pixels, charsWidth, charsHeight);
+    const bounds = getDrawnBounds(pixels, charsWidth, charsHeight, attributes);
     if (!bounds) {
       alert('Nothing to export - draw something first!');
       return;

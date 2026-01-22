@@ -145,6 +145,348 @@ describe('drawing utility', () => {
         height: 1,
       });
     });
+
+    it('should include cells with non-default attributes even without pixels', () => {
+      const pixels = createEmptyPixels(24, 24); // 3x3 chars
+      // No pixels drawn, but we have custom attributes
+      const attributes = [
+        [{ ink: 7, paper: 1, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }], // row 0: first cell has blue paper
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }], // row 1: all default
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 2, bright: true }], // row 2: last cell has red paper
+      ];
+      const bounds = getDrawnBounds(pixels, 3, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 2,
+        maxCharY: 2,
+        width: 3,
+        height: 3,
+      });
+    });
+
+    it('should return null for canvas with only default attributes and no pixels', () => {
+      const pixels = createEmptyPixels(24, 24);
+      const attributes = [
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }],
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }],
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }],
+      ];
+      const bounds = getDrawnBounds(pixels, 3, 3, attributes);
+      expect(bounds).toBeNull();
+    });
+
+    it('should combine pixel bounds with attribute bounds', () => {
+      const pixels = createEmptyPixels(24, 24); // 3x3 chars
+      pixels[12][12] = true; // Pixel in middle cell (1,1)
+      const attributes = [
+        [{ ink: 7, paper: 1, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }], // row 0: first cell has blue paper
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }], // row 1: all default
+        [{ ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 2, bright: true }], // row 2: last cell has red paper
+      ];
+      const bounds = getDrawnBounds(pixels, 3, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 2,
+        maxCharY: 2,
+        width: 3,
+        height: 3,
+      });
+    });
+
+    it('should work without attributes parameter (backwards compatible)', () => {
+      const pixels = createEmptyPixels(24, 24);
+      pixels[0][0] = true;
+      const bounds = getDrawnBounds(pixels, 3, 3);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should detect non-default ink color', () => {
+      const pixels = createEmptyPixels(8, 8);
+      const attributes = [
+        [{ ink: 4, paper: 0, bright: true }], // non-default ink (green instead of white)
+      ];
+      const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should detect non-default bright setting', () => {
+      const pixels = createEmptyPixels(8, 8);
+      const attributes = [
+        [{ ink: 7, paper: 0, bright: false }], // non-default bright
+      ];
+      const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should detect all non-default paper colors (1-7)', () => {
+      // Paper 0 is default, so test 1-7
+      for (let paper = 1; paper <= 7; paper++) {
+        const pixels = createEmptyPixels(8, 8);
+        const attributes = [
+          [{ ink: 7, paper, bright: true }],
+        ];
+        const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+        expect(bounds).not.toBeNull();
+        expect(bounds?.width).toBe(1);
+      }
+    });
+
+    it('should detect all non-default ink colors (0-6)', () => {
+      // Ink 7 is default, so test 0-6
+      for (let ink = 0; ink <= 6; ink++) {
+        const pixels = createEmptyPixels(8, 8);
+        const attributes = [
+          [{ ink, paper: 0, bright: true }],
+        ];
+        const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+        expect(bounds).not.toBeNull();
+        expect(bounds?.width).toBe(1);
+      }
+    });
+
+    it('should handle attribute-only content in middle of canvas', () => {
+      const pixels = createEmptyPixels(56, 24); // 7x3 chars
+      // Create default attributes for entire canvas
+      const attributes = Array(3).fill(null).map(() =>
+        Array(7).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+      // Set non-default attribute in middle cell only (3, 1)
+      attributes[1][3] = { ink: 7, paper: 4, bright: true }; // green paper
+
+      const bounds = getDrawnBounds(pixels, 7, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 3,
+        minCharY: 1,
+        maxCharX: 3,
+        maxCharY: 1,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should handle the test.json scenario: blue top, sprite middle, red bottom', () => {
+      // Simulating 3x7 canvas like test.json
+      const pixels = createEmptyPixels(24, 56); // 3 chars wide x 7 chars tall
+
+      // Draw some pixels in the middle rows (rows 2-4)
+      pixels[20][10] = true; // Pixel in row 2
+      pixels[28][12] = true; // Pixel in row 3
+      pixels[36][14] = true; // Pixel in row 4
+
+      // Create attributes: blue top (rows 0-1), purple middle diagonal, red bottom (rows 5-6)
+      const attributes = [
+        // Row 0: all blue paper
+        [{ ink: 7, paper: 1, bright: true }, { ink: 7, paper: 1, bright: true }, { ink: 7, paper: 1, bright: true }],
+        // Row 1: all blue paper
+        [{ ink: 7, paper: 1, bright: true }, { ink: 7, paper: 1, bright: true }, { ink: 7, paper: 1, bright: true }],
+        // Row 2: purple diagonal starts
+        [{ ink: 4, paper: 3, bright: true }, { ink: 4, paper: 0, bright: true }, { ink: 4, paper: 0, bright: true }],
+        // Row 3: purple diagonal middle
+        [{ ink: 4, paper: 0, bright: true }, { ink: 4, paper: 3, bright: true }, { ink: 4, paper: 0, bright: true }],
+        // Row 4: purple diagonal ends
+        [{ ink: 4, paper: 0, bright: true }, { ink: 4, paper: 0, bright: true }, { ink: 4, paper: 3, bright: true }],
+        // Row 5: all red paper
+        [{ ink: 7, paper: 2, bright: true }, { ink: 7, paper: 2, bright: true }, { ink: 7, paper: 2, bright: true }],
+        // Row 6: all red paper
+        [{ ink: 7, paper: 2, bright: true }, { ink: 7, paper: 2, bright: true }, { ink: 7, paper: 2, bright: true }],
+      ];
+
+      const bounds = getDrawnBounds(pixels, 3, 7, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 2,
+        maxCharY: 6,
+        width: 3,
+        height: 7,
+      });
+    });
+
+    it('should expand bounds when attributes extend beyond pixel bounds', () => {
+      const pixels = createEmptyPixels(40, 40); // 5x5 chars
+      // Draw pixel only in center cell (2, 2)
+      pixels[20][20] = true;
+
+      // Create attributes with custom colors at corners
+      const attributes = Array(5).fill(null).map(() =>
+        Array(5).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+      attributes[0][0] = { ink: 7, paper: 1, bright: true }; // top-left blue
+      attributes[4][4] = { ink: 7, paper: 2, bright: true }; // bottom-right red
+
+      const bounds = getDrawnBounds(pixels, 5, 5, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 4,
+        maxCharY: 4,
+        width: 5,
+        height: 5,
+      });
+    });
+
+    it('should handle sparse non-default attributes', () => {
+      const pixels = createEmptyPixels(56, 24); // 7x3 chars
+      // All default attributes except corners
+      const attributes = Array(3).fill(null).map(() =>
+        Array(7).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+      attributes[0][1] = { ink: 7, paper: 3, bright: true }; // magenta at (1, 0)
+      attributes[2][5] = { ink: 7, paper: 5, bright: true }; // cyan at (5, 2)
+
+      const bounds = getDrawnBounds(pixels, 7, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 1,
+        minCharY: 0,
+        maxCharX: 5,
+        maxCharY: 2,
+        width: 5,
+        height: 3,
+      });
+    });
+
+    it('should handle undefined attributes gracefully', () => {
+      const pixels = createEmptyPixels(24, 24);
+      pixels[0][0] = true;
+      const bounds = getDrawnBounds(pixels, 3, 3, undefined);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should handle empty attributes array', () => {
+      const pixels = createEmptyPixels(24, 24);
+      pixels[0][0] = true;
+      const bounds = getDrawnBounds(pixels, 3, 3, []);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should handle attributes with missing rows', () => {
+      const pixels = createEmptyPixels(24, 24);
+      // Attributes only for first row
+      const attributes = [
+        [{ ink: 7, paper: 1, bright: true }, { ink: 7, paper: 0, bright: true }, { ink: 7, paper: 0, bright: true }],
+      ];
+      const bounds = getDrawnBounds(pixels, 3, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should prioritize pixels when both pixels and attributes exist in same cell', () => {
+      const pixels = createEmptyPixels(8, 8);
+      pixels[4][4] = true;
+      const attributes = [
+        [{ ink: 7, paper: 1, bright: true }], // also has non-default attribute
+      ];
+      const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
+
+    it('should handle single row of non-default attributes', () => {
+      const pixels = createEmptyPixels(56, 24); // 7x3 chars
+      const attributes = Array(3).fill(null).map(() =>
+        Array(7).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+      // Set entire top row to blue
+      for (let x = 0; x < 7; x++) {
+        attributes[0][x] = { ink: 7, paper: 1, bright: true };
+      }
+
+      const bounds = getDrawnBounds(pixels, 7, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 6,
+        maxCharY: 0,
+        width: 7,
+        height: 1,
+      });
+    });
+
+    it('should handle single column of non-default attributes', () => {
+      const pixels = createEmptyPixels(56, 24); // 7x3 chars
+      const attributes = Array(3).fill(null).map(() =>
+        Array(7).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+      // Set entire left column to red
+      for (let y = 0; y < 3; y++) {
+        attributes[y][0] = { ink: 7, paper: 2, bright: true };
+      }
+
+      const bounds = getDrawnBounds(pixels, 7, 3, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 2,
+        width: 1,
+        height: 3,
+      });
+    });
+
+    it('should detect multiple attribute differences in same cell', () => {
+      const pixels = createEmptyPixels(8, 8);
+      const attributes = [
+        [{ ink: 4, paper: 2, bright: false }], // all three differ from default
+      ];
+      const bounds = getDrawnBounds(pixels, 1, 1, attributes);
+      expect(bounds).toEqual({
+        minCharX: 0,
+        minCharY: 0,
+        maxCharX: 0,
+        maxCharY: 0,
+        width: 1,
+        height: 1,
+      });
+    });
   });
 
   describe('createEmptyPixels', () => {

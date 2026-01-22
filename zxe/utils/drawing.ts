@@ -1,5 +1,14 @@
-import { Point, DrawBounds } from '@/types';
+import { Point, DrawBounds, Attribute } from '@/types';
 import { CHAR_SIZE } from '@/constants';
+
+// Default attribute for comparison
+const DEFAULT_ATTRIBUTE: Attribute = { ink: 7, paper: 0, bright: true };
+
+function isNonDefaultAttribute(attr: Attribute): boolean {
+  return attr.ink !== DEFAULT_ATTRIBUTE.ink ||
+         attr.paper !== DEFAULT_ATTRIBUTE.paper ||
+         attr.bright !== DEFAULT_ATTRIBUTE.bright;
+}
 
 // Bresenham's line algorithm
 export function getLinePoints(x0: number, y0: number, x1: number, y1: number): Point[] {
@@ -30,30 +39,42 @@ export function getLinePoints(x0: number, y0: number, x1: number, y1: number): P
 }
 
 // Calculate bounding box of drawn content (in character cells)
+// Includes characters with pixels OR non-default attributes (e.g., custom paper color)
 export function getDrawnBounds(
   pixels: boolean[][],
   charsWidth: number,
-  charsHeight: number
+  charsHeight: number,
+  attributes?: Attribute[][]
 ): DrawBounds | null {
   let minCharX = charsWidth;
   let minCharY = charsHeight;
   let maxCharX = -1;
   let maxCharY = -1;
 
-  // Check each character cell for any drawn pixels
+  // Check each character cell for any drawn pixels or non-default attributes
   for (let charY = 0; charY < charsHeight; charY++) {
     for (let charX = 0; charX < charsWidth; charX++) {
-      let hasPixels = false;
-      for (let py = 0; py < CHAR_SIZE && !hasPixels; py++) {
-        for (let px = 0; px < CHAR_SIZE && !hasPixels; px++) {
+      let hasContent = false;
+
+      // Check for drawn pixels
+      for (let py = 0; py < CHAR_SIZE && !hasContent; py++) {
+        for (let px = 0; px < CHAR_SIZE && !hasContent; px++) {
           const pixelX = charX * CHAR_SIZE + px;
           const pixelY = charY * CHAR_SIZE + py;
           if (pixels[pixelY]?.[pixelX]) {
-            hasPixels = true;
+            hasContent = true;
           }
         }
       }
-      if (hasPixels) {
+
+      // Also check for non-default attributes (custom ink/paper colors)
+      if (!hasContent && attributes?.[charY]?.[charX]) {
+        if (isNonDefaultAttribute(attributes[charY][charX])) {
+          hasContent = true;
+        }
+      }
+
+      if (hasContent) {
         minCharX = Math.min(minCharX, charX);
         minCharY = Math.min(minCharY, charY);
         maxCharX = Math.max(maxCharX, charX);
