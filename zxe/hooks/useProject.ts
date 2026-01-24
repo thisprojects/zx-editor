@@ -32,8 +32,9 @@ export function useProject({
 
   // Save project file (preserves everything)
   const saveProject = useCallback(() => {
-    const project: ProjectData = {
+    const project = {
       version: 2,
+      type: 'sprite',
       charsWidth,
       charsHeight,
       pixels,
@@ -44,7 +45,7 @@ export function useProject({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fileName}.json`;
+    a.download = `${fileName}_sprite.json`;
     a.click();
     URL.revokeObjectURL(url);
   }, [charsWidth, charsHeight, pixels, attributes, fileName]);
@@ -65,14 +66,20 @@ export function useProject({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Set filename from loaded file (remove extension)
-    const loadedName = file.name.replace(/\.[^/.]+$/, '');
+    // Set filename from loaded file (remove extension and _sprite suffix)
+    const loadedName = file.name.replace(/(_sprite)?\.json$/, '');
     setFileName(loadedName);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const project = JSON.parse(event.target?.result as string);
+
+        // Check if this is a scene file
+        if (project.type === 'scene') {
+          alert('This is a scene file. Please use the Scene Editor to open it.');
+          return;
+        }
 
         // Determine canvas size from project or use defaults
         const loadedWidth = project.charsWidth ?? DEFAULT_CHARS_WIDTH;

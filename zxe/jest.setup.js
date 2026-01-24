@@ -12,6 +12,7 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   fillStyle: '',
   strokeStyle: '',
   lineWidth: 1,
+  clearRect: jest.fn(),
   fillRect: jest.fn(),
   beginPath: jest.fn(),
   moveTo: jest.fn(),

@@ -116,7 +116,7 @@ describe('useProject hook', () => {
         result.current.saveProject();
       });
 
-      expect(downloadAttribute).toBe('my_project.json');
+      expect(downloadAttribute).toBe('my_project_sprite.json');
     });
   });
 
@@ -178,7 +178,7 @@ describe('useProject hook', () => {
       expect(props.loadProjectData).not.toHaveBeenCalled();
     });
 
-    it('should set fileName from loaded file', () => {
+    it('should set fileName from loaded file (strips _sprite suffix)', () => {
       const props = createMockProps();
       const { result } = renderHook(() => useProject(props));
 
@@ -191,14 +191,31 @@ describe('useProject hook', () => {
         result.current.loadProject(event);
       });
 
-      expect(props.setFileName).toHaveBeenCalledWith('my_sprite');
+      // Strips _sprite suffix from filename
+      expect(props.setFileName).toHaveBeenCalledWith('my');
+    });
+
+    it('should set fileName without suffix if not present', () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useProject(props));
+
+      const mockFile = new File(['{}'], 'my_project.json', { type: 'application/json' });
+      const event = {
+        target: { files: [mockFile] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        result.current.loadProject(event);
+      });
+
+      expect(props.setFileName).toHaveBeenCalledWith('my_project');
     });
 
     it('should handle file with multiple dots in name', () => {
       const props = createMockProps();
       const { result } = renderHook(() => useProject(props));
 
-      const mockFile = new File(['{}'], 'my.sprite.v2.json', { type: 'application/json' });
+      const mockFile = new File(['{}'], 'my.sprite.v2_sprite.json', { type: 'application/json' });
       const event = {
         target: { files: [mockFile] },
       } as unknown as React.ChangeEvent<HTMLInputElement>;
