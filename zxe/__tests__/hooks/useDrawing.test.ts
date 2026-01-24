@@ -148,6 +148,85 @@ describe('useDrawing hook', () => {
     });
   });
 
+  describe('bucketFill', () => {
+    it('should fill paper colour at given pixel coordinates', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.setCurrentInk(2);
+        result.current.setCurrentBright(false);
+      });
+
+      act(() => {
+        result.current.bucketFill(4, 4);
+      });
+
+      expect(result.current.attributes[0][0]).toEqual({
+        ink: 7, // Original ink preserved
+        paper: 2,
+        bright: false,
+      });
+    });
+
+    it('should only affect the character cell containing the pixel', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.setCurrentInk(3);
+      });
+
+      // Fill cell at (1, 1) - pixel (10, 10) is in char cell (1, 1)
+      act(() => {
+        result.current.bucketFill(10, 10);
+      });
+
+      expect(result.current.attributes[1][1].paper).toBe(3);
+      expect(result.current.attributes[0][0].paper).toBe(0); // Unchanged
+      expect(result.current.attributes[0][1].paper).toBe(0); // Unchanged
+    });
+
+    it('should preserve existing ink colour', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      // First set ink
+      act(() => {
+        result.current.setCurrentInk(5);
+      });
+
+      // Set a pixel to establish the ink in attribute
+      act(() => {
+        result.current.setPixel(0, 0, true);
+      });
+
+      // Then bucket fill with a different colour
+      act(() => {
+        result.current.setCurrentInk(2);
+      });
+
+      act(() => {
+        result.current.bucketFill(0, 0);
+      });
+
+      // Ink should still be 5 (from setPixel), paper should be 2 (from bucketFill)
+      expect(result.current.attributes[0][0].ink).toBe(5);
+      expect(result.current.attributes[0][0].paper).toBe(2);
+    });
+
+    it('should use current bright setting', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.setCurrentBright(false);
+      });
+
+      act(() => {
+        result.current.bucketFill(0, 0);
+      });
+
+      expect(result.current.attributes[0][0].bright).toBe(false);
+    });
+  });
+
   describe('drawLine', () => {
     it('should draw a horizontal line', () => {
       const { result } = renderHook(() => useDrawing());

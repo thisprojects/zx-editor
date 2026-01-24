@@ -99,6 +99,21 @@ describe('Toolbar component', () => {
       fireEvent.click(screen.getByTitle('Rubber'));
       expect(props.onSelectTool).toHaveBeenCalledWith('rubber');
     });
+
+    it('should show bucket tool as selected', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'bucket';
+      render(<Toolbar {...props} />);
+      const bucketButton = screen.getByTitle('Bucket Fill (Paper)');
+      expect(bucketButton).toHaveClass('bg-blue-600');
+    });
+
+    it('should call onSelectTool when bucket clicked', () => {
+      const props = createDefaultProps();
+      render(<Toolbar {...props} />);
+      fireEvent.click(screen.getByTitle('Bucket Fill (Paper)'));
+      expect(props.onSelectTool).toHaveBeenCalledWith('bucket');
+    });
   });
 
   describe('color picker', () => {
