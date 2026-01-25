@@ -275,18 +275,17 @@ export function SceneCanvas({
   }, [pixels, attributes, pixelSize, charsWidth, charsHeight, canvasWidth, canvasHeight, lineStart, linePreview, showGrid]);
 
   return (
-    <div
-      ref={containerRef}
-      className="overflow-auto h-[calc(100vh-40px)] bg-gray-950"
-      onWheel={handleWheel}
-    >
+    <div className="relative h-[calc(100vh-40px)]">
       <div
-        className="min-w-full min-h-full flex items-center justify-center p-4"
-        style={{
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-        }}
+        ref={containerRef}
+        className="overflow-auto h-full bg-gray-950"
       >
-        <div className="relative">
+        <div
+          className="min-w-full min-h-full flex items-center justify-center p-4"
+          style={{
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+          }}
+        >
           <canvas
             ref={canvasRef}
             width={canvasWidth * pixelSize}
@@ -299,11 +298,11 @@ export function SceneCanvas({
             className={`border border-gray-600 ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
             style={{ imageRendering: 'pixelated' }}
           />
-          {/* Zoom indicator */}
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            {pixelSize}x | {canvasWidth}×{canvasHeight}px
-          </div>
         </div>
+      </div>
+      {/* Zoom indicator - fixed outside canvas */}
+      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">
+        {pixelSize}x | {canvasWidth}×{canvasHeight}px
       </div>
     </div>
   );
