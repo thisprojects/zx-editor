@@ -28,3 +28,21 @@ export interface ProjectData {
   pixels: boolean[][];
   attributes: Attribute[][];
 }
+
+// Tile Editor types
+export type TileSize = 8 | 16 | 24;
+
+export interface TileSizeConfig {
+  pixels: number;       // 8, 16, or 24
+  chars: number;        // 1, 2, or 3 (characters per dimension)
+  totalChars: number;   // 1, 4, or 9 (total character cells)
+  label: string;        // Display label: "8×8", "16×16", "24×24"
+}
+
+export interface TileProjectData {
+  version: number;
+  type: 'tile';
+  tileSize: TileSize;
+  pixels: boolean[][];
+  attributes: Attribute[][];
+}

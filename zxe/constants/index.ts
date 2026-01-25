@@ -27,3 +27,15 @@ export const SCREEN_DISPLAY_SIZE = 6144;    // bytes for pixel data
 export const SCREEN_ATTR_SIZE = 768;        // bytes for attributes (32x24)
 export const SCREEN_TOTAL_SIZE = 6912;      // total screen memory
 export const DEFAULT_SCREEN_PIXEL_SIZE = 3; // smaller zoom for full screen
+
+// Tile Editor constants
+import { TileSize, TileSizeConfig } from '@/types';
+
+export const TILE_SIZES: Record<TileSize, TileSizeConfig> = {
+  8: { pixels: 8, chars: 1, totalChars: 1, label: '8×8' },
+  16: { pixels: 16, chars: 2, totalChars: 4, label: '16×16' },
+  24: { pixels: 24, chars: 3, totalChars: 9, label: '24×24' },
+};
+
+export const DEFAULT_TILE_SIZE: TileSize = 8;
+export const DEFAULT_TILE_PIXEL_SIZE = 15; // larger zoom for small tiles
