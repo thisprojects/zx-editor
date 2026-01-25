@@ -144,7 +144,7 @@ describe('Tile Editor page', () => {
       render(<TileEditorPage />);
       fireEvent.click(screen.getByText('Export'));
 
-      expect(screen.getByText('Export Project')).toBeInTheDocument();
+      expect(screen.getByText('Export ASM')).toBeInTheDocument();
     });
 
     it('should close modal when Cancel clicked', () => {
