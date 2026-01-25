@@ -7,6 +7,7 @@ const navItems = [
   { href: '/sprite_editor', label: 'Sprite Editor' },
   { href: '/scene_editor', label: 'Scene Editor' },
   { href: '/tile_editor', label: 'Tile Editor' },
+  { href: '/level_editor', label: 'Level Editor' },
 ];
 
 export function Navbar() {

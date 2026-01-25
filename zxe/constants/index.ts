@@ -39,3 +39,16 @@ export const TILE_SIZES: Record<TileSize, TileSizeConfig> = {
 
 export const DEFAULT_TILE_SIZE: TileSize = 8;
 export const DEFAULT_TILE_PIXEL_SIZE = 15; // larger zoom for small tiles
+
+// Level Editor constants
+export const DEFAULT_LEVEL_PIXEL_SIZE = 3; // zoom level for level editor
+
+// Grid dimensions per tile size for level editor
+// - 8×8 tiles: 32×24 grid (full ZX screen coverage)
+// - 16×16 tiles: 16×12 grid
+// - 24×24 tiles: 10×8 grid (with 16px unused on right, 0 on bottom)
+export const LEVEL_GRID_SIZES: Record<TileSize, { cols: number; rows: number }> = {
+  8: { cols: 32, rows: 24 },
+  16: { cols: 16, rows: 12 },
+  24: { cols: 10, rows: 8 },
+};

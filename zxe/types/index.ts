@@ -46,3 +46,25 @@ export interface TileProjectData {
   pixels: boolean[][];
   attributes: Attribute[][];
 }
+
+// Level Editor types
+export interface TileData {
+  id: string;                         // Unique tile ID
+  name: string;                       // Display name
+  pixels: boolean[][];                // Pixel data
+  attributes: Attribute[][];          // Color data
+}
+
+export interface ScreenData {
+  name: string;                       // Screen name (e.g., "Screen 1")
+  map: (number | null)[][];           // Grid of tile indices (null = empty)
+}
+
+export interface LevelProjectData {
+  version: number;                    // 1
+  type: 'level';                      // File type identifier
+  tileSize: TileSize;                 // 8, 16, or 24 (consistent across level)
+  tileLibrary: TileData[];            // Loaded tiles (indexed 0-N)
+  screens: ScreenData[];              // Array of level screens
+  currentScreenIndex: number;         // Active screen
+}
