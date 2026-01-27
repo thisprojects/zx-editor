@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/sprite_editor', label: 'Sprite Editor' },
+  { href: '/sprite_editor', label: 'UDG Editor' },
+  { href: '/player_sprite_editor', label: 'Player Sprite' },
   { href: '/scene_editor', label: 'Scene Editor' },
   { href: '/tile_editor', label: 'Tile Editor' },
   { href: '/level_editor', label: 'Level Editor' },

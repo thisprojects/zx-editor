@@ -52,3 +52,21 @@ export const LEVEL_GRID_SIZES: Record<TileSize, { cols: number; rows: number }> 
   16: { cols: 16, rows: 12 },
   24: { cols: 10, rows: 8 },
 };
+
+// Software Sprite Editor constants
+import { SoftwareSpriteSizeConfig, SoftwareSpriteWidth, SoftwareSpriteHeight } from '@/types';
+
+export const SOFTWARE_SPRITE_SIZES: Record<string, SoftwareSpriteSizeConfig> = {
+  '8x8':   { widthPixels: 8,  heightPixels: 8,  widthChars: 1, heightChars: 1, totalChars: 1, label: '8×8' },
+  '16x16': { widthPixels: 16, heightPixels: 16, widthChars: 2, heightChars: 2, totalChars: 4, label: '16×16' },
+  '16x24': { widthPixels: 16, heightPixels: 24, widthChars: 2, heightChars: 3, totalChars: 6, label: '16×24' },
+  '24x24': { widthPixels: 24, heightPixels: 24, widthChars: 3, heightChars: 3, totalChars: 9, label: '24×24' },
+};
+
+export const DEFAULT_SOFTWARE_SPRITE_WIDTH: SoftwareSpriteWidth = 16;
+export const DEFAULT_SOFTWARE_SPRITE_HEIGHT: SoftwareSpriteHeight = 16;
+export const DEFAULT_SOFTWARE_SPRITE_PIXEL_SIZE = 12;
+export const DEFAULT_ANIMATION_FPS = 10;
+export const DEFAULT_FRAME_DURATION = 100;
+export const MAX_ANIMATION_FRAMES = 32;
+export const PRESHIFT_COUNT = 8;

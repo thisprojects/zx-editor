@@ -68,3 +68,48 @@ export interface LevelProjectData {
   screens: ScreenData[];              // Array of level screens
   currentScreenIndex: number;         // Active screen
 }
+
+// Software Sprite Editor types
+export type SoftwareSpriteWidth = 8 | 16 | 24;
+export type SoftwareSpriteHeight = 8 | 16 | 24;
+
+export interface SoftwareSpriteSizeConfig {
+  widthPixels: number;
+  heightPixels: number;
+  widthChars: number;
+  heightChars: number;
+  totalChars: number;
+  label: string;
+}
+
+// Animation frame
+export interface SoftwareSpriteFrame {
+  id: string;
+  name: string;
+  pixels: boolean[][];
+  attributes: Attribute[][];
+  duration: number; // ms
+}
+
+// Export options
+export type MaskInterleaving = 'sprite-mask' | 'separate-blocks';
+
+export interface SoftwareSpriteExportOptions {
+  includePreShifts: boolean;
+  includeMask: boolean;
+  interleaving: MaskInterleaving;
+  generateLookupTable: boolean;
+}
+
+// Project file
+export interface SoftwareSpriteProjectData {
+  version: number;
+  type: 'software_sprite';
+  spriteWidth: SoftwareSpriteWidth;
+  spriteHeight: SoftwareSpriteHeight;
+  frames: SoftwareSpriteFrame[];
+  currentFrameIndex: number;
+  animationFps: number;
+  loopAnimation: boolean;
+  exportOptions: SoftwareSpriteExportOptions;
+}
