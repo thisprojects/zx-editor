@@ -34,9 +34,11 @@ describe('EditorLayout', () => {
       </EditorLayout>
     );
 
-    expect(screen.getByText('Sprite Editor')).toBeInTheDocument();
+    expect(screen.getByText('UDG Editor')).toBeInTheDocument();
+    expect(screen.getByText('Player Sprite')).toBeInTheDocument();
     expect(screen.getByText('Scene Editor')).toBeInTheDocument();
     expect(screen.getByText('Tile Editor')).toBeInTheDocument();
+    expect(screen.getByText('Level Editor')).toBeInTheDocument();
   });
 
   it('should have correct styling', () => {

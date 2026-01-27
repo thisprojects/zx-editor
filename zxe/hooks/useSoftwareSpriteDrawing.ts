@@ -25,7 +25,9 @@ function createEmptyFrame(
   height: number,
   widthChars: number,
   heightChars: number,
-  name: string
+  name: string,
+  ink: number = 7,
+  bright: boolean = true
 ): SoftwareSpriteFrame {
   return {
     id: generateFrameId(),
@@ -36,7 +38,7 @@ function createEmptyFrame(
       .map(() =>
         Array(widthChars)
           .fill(null)
-          .map(() => ({ ink: 7, paper: 0, bright: true }))
+          .map(() => ({ ink, paper: 0, bright }))
       ),
     duration: DEFAULT_FRAME_DURATION,
   };
@@ -240,24 +242,26 @@ export function useSoftwareSpriteDrawing({
         canvasHeight,
         widthChars,
         heightChars,
-        newFrames[currentFrameIndex].name
+        newFrames[currentFrameIndex].name,
+        currentInk,
+        currentBright
       );
       newFrames[currentFrameIndex].id = prev[currentFrameIndex].id; // Keep same ID
       return newFrames;
     });
     setLineStart(null);
     setLinePreview(null);
-  }, [currentFrameIndex, canvasWidth, canvasHeight, widthChars, heightChars, isPlaying]);
+  }, [currentFrameIndex, canvasWidth, canvasHeight, widthChars, heightChars, isPlaying, currentInk, currentBright]);
 
   // Clear all frames
   const clearAllFrames = useCallback(() => {
     if (isPlaying) return;
 
-    setFrames([createEmptyFrame(canvasWidth, canvasHeight, widthChars, heightChars, 'Frame 1')]);
+    setFrames([createEmptyFrame(canvasWidth, canvasHeight, widthChars, heightChars, 'Frame 1', currentInk, currentBright)]);
     setCurrentFrameIndex(0);
     setLineStart(null);
     setLinePreview(null);
-  }, [canvasWidth, canvasHeight, widthChars, heightChars, isPlaying]);
+  }, [canvasWidth, canvasHeight, widthChars, heightChars, isPlaying, currentInk, currentBright]);
 
   // Add new frame
   const addFrame = useCallback(() => {
@@ -266,10 +270,10 @@ export function useSoftwareSpriteDrawing({
 
     setFrames((prev) => [
       ...prev,
-      createEmptyFrame(canvasWidth, canvasHeight, widthChars, heightChars, `Frame ${prev.length + 1}`),
+      createEmptyFrame(canvasWidth, canvasHeight, widthChars, heightChars, `Frame ${prev.length + 1}`, currentInk, currentBright),
     ]);
     setCurrentFrameIndex(frames.length);
-  }, [frames.length, canvasWidth, canvasHeight, widthChars, heightChars, isPlaying]);
+  }, [frames.length, canvasWidth, canvasHeight, widthChars, heightChars, isPlaying, currentInk, currentBright]);
 
   // Duplicate current frame
   const duplicateFrame = useCallback(() => {
@@ -357,13 +361,15 @@ export function useSoftwareSpriteDrawing({
       newConfig.heightPixels,
       newConfig.widthChars,
       newConfig.heightChars,
-      'Frame 1'
+      'Frame 1',
+      currentInk,
+      currentBright
     )]);
     setCurrentFrameIndex(0);
     setLineStart(null);
     setLinePreview(null);
     setIsPlaying(false);
-  }, []);
+  }, [currentInk, currentBright]);
 
   // Toggle animation playback
   const togglePlayback = useCallback(() => {

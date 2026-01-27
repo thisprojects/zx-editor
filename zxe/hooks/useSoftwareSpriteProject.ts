@@ -263,14 +263,51 @@ export function useSoftwareSpriteProject({
       }
     }
 
-    // Export attributes for first frame
+    // Export attributes - only use attributes from cells that have pixels
+    // For each cell, find the first frame where that cell contains pixels and use its attribute
     lines.push('');
     lines.push(`${label}_attr:`);
-    const firstFrame = frames[0];
+
+    // Helper to check if a character cell has any pixels
+    const cellHasPixels = (frame: typeof frames[0], charX: number, charY: number): boolean => {
+      const startX = charX * CHAR_SIZE;
+      const startY = charY * CHAR_SIZE;
+      for (let y = startY; y < startY + CHAR_SIZE && y < frame.pixels.length; y++) {
+        for (let x = startX; x < startX + CHAR_SIZE && x < (frame.pixels[y]?.length || 0); x++) {
+          if (frame.pixels[y][x]) return true;
+        }
+      }
+      return false;
+    };
+
+    // Find a fallback attribute from any cell that has pixels (across all frames)
+    let fallbackAttr: Attribute | null = null;
+    for (const frame of frames) {
+      for (let charY = 0; charY < sizeConfig.heightChars && !fallbackAttr; charY++) {
+        for (let charX = 0; charX < sizeConfig.widthChars && !fallbackAttr; charX++) {
+          if (cellHasPixels(frame, charX, charY)) {
+            fallbackAttr = frame.attributes[charY]?.[charX] || null;
+          }
+        }
+      }
+      if (fallbackAttr) break;
+    }
+
     for (let charY = 0; charY < sizeConfig.heightChars; charY++) {
       const attrBytes: string[] = [];
       for (let charX = 0; charX < sizeConfig.widthChars; charX++) {
-        const attr = firstFrame.attributes[charY]?.[charX] || { ink: 7, paper: 0, bright: true };
+        // Find first frame where this cell has pixels
+        let attr: Attribute | null = null;
+        for (const frame of frames) {
+          if (cellHasPixels(frame, charX, charY)) {
+            attr = frame.attributes[charY]?.[charX] || null;
+            break;
+          }
+        }
+        // Use fallback if no frame has pixels in this cell
+        if (!attr) {
+          attr = fallbackAttr || { ink: 7, paper: 0, bright: true };
+        }
         const attrByte = (attr.bright ? 0x40 : 0) | (attr.paper << 3) | attr.ink;
         attrBytes.push(`$${attrByte.toString(16).padStart(2, '0')}`);
       }
