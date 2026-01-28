@@ -29,7 +29,7 @@ interface UseSoftwareSpriteProjectProps {
 }
 
 const DEFAULT_EXPORT_OPTIONS: SoftwareSpriteExportOptions = {
-  includePreShifts: false,
+  includePreShifts: true,
   includeMask: true,
   interleaving: 'sprite-mask',
   generateLookupTable: false,

@@ -72,24 +72,14 @@ export function PlayerSpriteCanvas({
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw onion skin (previous frame) if enabled
+    // Draw onion skin (previous frame) if enabled - always grey
     if (onionSkinEnabled && previousFramePixels && !isPlaying) {
-      for (let charY = 0; charY < heightChars; charY++) {
-        for (let charX = 0; charX < widthChars; charX++) {
-          const attr = attributes[charY]?.[charX] || { ink: 7, paper: 0, bright: true };
-          const inkColour = getColourHex(attr.ink, attr.bright);
-          const paperColour = getColourHex(attr.paper, attr.bright);
-
-          for (let py = 0; py < CHAR_SIZE; py++) {
-            for (let px = 0; px < CHAR_SIZE; px++) {
-              const pixelX = charX * CHAR_SIZE + px;
-              const pixelY = charY * CHAR_SIZE + py;
-              const isInk = previousFramePixels[pixelY]?.[pixelX] || false;
-
-              ctx.globalAlpha = onionSkinOpacity;
-              ctx.fillStyle = isInk ? inkColour : paperColour;
-              ctx.fillRect(pixelX * pixelSize, pixelY * pixelSize, pixelSize, pixelSize);
-            }
+      ctx.globalAlpha = onionSkinOpacity;
+      ctx.fillStyle = '#888888';
+      for (let y = 0; y < spriteHeight; y++) {
+        for (let x = 0; x < spriteWidth; x++) {
+          if (previousFramePixels[y]?.[x]) {
+            ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
           }
         }
       }

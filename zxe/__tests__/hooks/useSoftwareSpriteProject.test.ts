@@ -96,7 +96,7 @@ describe('useSoftwareSpriteProject', () => {
       const { result } = renderHook(() => useSoftwareSpriteProject(props));
 
       expect(result.current.exportOptions.includeMask).toBe(true);
-      expect(result.current.exportOptions.includePreShifts).toBe(false);
+      expect(result.current.exportOptions.includePreShifts).toBe(true);
       expect(result.current.exportOptions.interleaving).toBe('sprite-mask');
     });
   });
@@ -262,7 +262,7 @@ describe('useSoftwareSpriteProject', () => {
         result.current.exportASM();
       });
 
-      expect(lastBlobContent).toContain('player_frame0:');
+      expect(lastBlobContent).toContain('player_frame0_shift0:');
       expect(lastBlobContent).toContain('player_attr:');
     });
 
@@ -281,8 +281,8 @@ describe('useSoftwareSpriteProject', () => {
         result.current.exportASM();
       });
 
-      expect(lastBlobContent).toContain('sprite_frame0:');
-      expect(lastBlobContent).toContain('sprite_frame1:');
+      expect(lastBlobContent).toContain('sprite_frame0_shift0:');
+      expect(lastBlobContent).toContain('sprite_frame1_shift0:');
       expect(lastBlobContent).toContain('; Frames: 2');
     });
   });
