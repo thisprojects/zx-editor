@@ -90,6 +90,18 @@ export default function PlayerSpriteEditorPage() {
           onOnionSkinChange={drawing.setOnionSkinEnabled}
           onionSkinOpacity={drawing.onionSkinOpacity}
           onOnionSkinOpacityChange={drawing.setOnionSkinOpacity}
+          // Background image
+          backgroundImage={drawing.backgroundImage}
+          backgroundEnabled={drawing.backgroundEnabled}
+          backgroundOpacity={drawing.backgroundOpacity}
+          backgroundScale={drawing.backgroundScale}
+          backgroundAdjustMode={drawing.backgroundAdjustMode}
+          onBackgroundEnabledChange={drawing.setBackgroundEnabled}
+          onBackgroundOpacityChange={drawing.setBackgroundOpacity}
+          onBackgroundScaleChange={drawing.setBackgroundScale}
+          onBackgroundAdjustModeChange={drawing.setBackgroundAdjustMode}
+          onLoadBackgroundImage={drawing.loadBackgroundImage}
+          onClearBackgroundImage={drawing.clearBackgroundImage}
           // Export options
           exportOptions={project.exportOptions}
           onExportOptionsChange={project.setExportOptions}
@@ -136,6 +148,13 @@ export default function PlayerSpriteEditorPage() {
           onionSkinEnabled={drawing.onionSkinEnabled}
           onionSkinOpacity={drawing.onionSkinOpacity}
           previousFramePixels={drawing.previousFramePixels}
+          backgroundImage={drawing.backgroundImage}
+          backgroundOpacity={drawing.backgroundOpacity}
+          backgroundEnabled={drawing.backgroundEnabled}
+          backgroundX={drawing.backgroundX}
+          backgroundY={drawing.backgroundY}
+          backgroundScale={drawing.backgroundScale}
+          backgroundAdjustMode={drawing.backgroundAdjustMode}
           currentFrameIndex={drawing.currentFrameIndex}
           totalFrames={drawing.frames.length}
           onSetIsDrawing={drawing.setIsDrawing}
@@ -144,6 +163,11 @@ export default function PlayerSpriteEditorPage() {
           onSetLineStart={drawing.setLineStart}
           onSetLinePreview={drawing.setLinePreview}
           onBucketFill={drawing.bucketFill}
+          onBackgroundMove={(x, y) => {
+            drawing.setBackgroundX(x);
+            drawing.setBackgroundY(y);
+          }}
+          onBackgroundScale={drawing.setBackgroundScale}
         />
       </div>
 

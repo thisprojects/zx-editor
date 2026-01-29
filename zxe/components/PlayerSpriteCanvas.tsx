@@ -22,6 +22,13 @@ interface PlayerSpriteCanvasProps {
   onionSkinEnabled: boolean;
   onionSkinOpacity: number;
   previousFramePixels: boolean[][] | null;
+  backgroundImage: HTMLImageElement | null;
+  backgroundOpacity: number;
+  backgroundEnabled: boolean;
+  backgroundX: number;
+  backgroundY: number;
+  backgroundScale: number;
+  backgroundAdjustMode: boolean;
   currentFrameIndex: number;
   totalFrames: number;
   onSetIsDrawing: (drawing: boolean) => void;
@@ -30,6 +37,8 @@ interface PlayerSpriteCanvasProps {
   onSetLineStart: (point: Point | null) => void;
   onSetLinePreview: (point: Point | null) => void;
   onBucketFill: (x: number, y: number) => void;
+  onBackgroundMove: (x: number, y: number) => void;
+  onBackgroundScale: (scale: number) => void;
 }
 
 export function PlayerSpriteCanvas({
@@ -48,6 +57,13 @@ export function PlayerSpriteCanvas({
   onionSkinEnabled,
   onionSkinOpacity,
   previousFramePixels,
+  backgroundImage,
+  backgroundOpacity,
+  backgroundEnabled,
+  backgroundX,
+  backgroundY,
+  backgroundScale,
+  backgroundAdjustMode,
   currentFrameIndex,
   totalFrames,
   onSetIsDrawing,
@@ -56,8 +72,13 @@ export function PlayerSpriteCanvas({
   onSetLineStart,
   onSetLinePreview,
   onBucketFill,
+  onBackgroundMove,
+  onBackgroundScale,
 }: PlayerSpriteCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDraggingBackground = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const initialBackgroundPos = useRef({ x: 0, y: 0 });
 
   const canvasWidth = spriteWidth;
   const canvasHeight = spriteHeight;
@@ -71,6 +92,21 @@ export function PlayerSpriteCanvas({
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw background image for tracing (editor-only)
+    if (backgroundImage && backgroundEnabled && !isPlaying) {
+      ctx.globalAlpha = backgroundOpacity;
+      const scaledWidth = canvas.width * backgroundScale;
+      const scaledHeight = canvas.height * backgroundScale;
+      ctx.drawImage(
+        backgroundImage,
+        backgroundX * pixelSize,
+        backgroundY * pixelSize,
+        scaledWidth,
+        scaledHeight
+      );
+      ctx.globalAlpha = 1;
+    }
 
     // Draw onion skin (previous frame) if enabled - always grey
     if (onionSkinEnabled && previousFramePixels && !isPlaying) {
@@ -98,6 +134,12 @@ export function PlayerSpriteCanvas({
             const pixelX = charX * CHAR_SIZE + px;
             const pixelY = charY * CHAR_SIZE + py;
             const isInk = pixels[pixelY]?.[pixelX] || false;
+
+            // Skip drawing paper pixels when background image is visible
+            // so the trace image shows through empty areas
+            if (!isInk && backgroundImage && backgroundEnabled && !isPlaying) {
+              continue;
+            }
 
             // If onion skin is enabled and this is paper, make it semi-transparent to show onion skin
             if (onionSkinEnabled && previousFramePixels && !isInk && !isPlaying) {
@@ -176,6 +218,12 @@ export function PlayerSpriteCanvas({
     onionSkinEnabled,
     onionSkinOpacity,
     previousFramePixels,
+    backgroundImage,
+    backgroundOpacity,
+    backgroundEnabled,
+    backgroundX,
+    backgroundY,
+    backgroundScale,
   ]);
 
   useEffect(() => {
@@ -198,6 +246,21 @@ export function PlayerSpriteCanvas({
   // Handle mouse events
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isPlaying) return;
+
+    // Handle background adjust mode
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+      isDraggingBackground.current = true;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        dragStart.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+        initialBackgroundPos.current = { x: backgroundX, y: backgroundY };
+      }
+      return;
+    }
 
     const coords = getPixelCoords(e);
     if (!coords) return;
@@ -225,6 +288,23 @@ export function PlayerSpriteCanvas({
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isPlaying) return;
 
+    // Handle background dragging
+    if (isDraggingBackground.current && backgroundAdjustMode) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        const deltaX = (currentX - dragStart.current.x) / pixelSize;
+        const deltaY = (currentY - dragStart.current.y) / pixelSize;
+        onBackgroundMove(
+          initialBackgroundPos.current.x + deltaX,
+          initialBackgroundPos.current.y + deltaY
+        );
+      }
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -238,17 +318,31 @@ export function PlayerSpriteCanvas({
   };
 
   const handleMouseUp = () => {
+    isDraggingBackground.current = false;
     onSetIsDrawing(false);
   };
 
   const handleMouseLeave = () => {
+    isDraggingBackground.current = false;
     onSetIsDrawing(false);
+  };
+
+  // Handle wheel for background scaling in adjust mode
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled && !isPlaying) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.max(0.1, Math.min(5, backgroundScale + delta));
+      onBackgroundScale(newScale);
+    }
   };
 
   // Get status message
   const getStatusMessage = () => {
     if (isPlaying) {
       return 'Animation playing...';
+    } else if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+      return 'Drag to move image, scroll to scale';
     } else if (currentTool === 'line' && lineStart) {
       return 'Click to set line end point';
     } else if (currentTool === 'line') {
@@ -283,7 +377,8 @@ export function PlayerSpriteCanvas({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          className={`border border-gray-600 ${isPlaying ? 'cursor-default' : 'cursor-crosshair'}`}
+          onWheel={handleWheel}
+          className={`border border-gray-600 ${isPlaying ? 'cursor-default' : backgroundAdjustMode ? 'cursor-move' : 'cursor-crosshair'}`}
         />
       </div>
 

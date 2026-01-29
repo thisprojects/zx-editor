@@ -15,6 +15,13 @@ interface SceneCanvasProps {
   linePreview: Point | null;
   isDrawing: boolean;
   showGrid: boolean;
+  backgroundImage: HTMLImageElement | null;
+  backgroundOpacity: number;
+  backgroundEnabled: boolean;
+  backgroundX: number;
+  backgroundY: number;
+  backgroundScale: number;
+  backgroundAdjustMode: boolean;
   onSetIsDrawing: (isDrawing: boolean) => void;
   onSetPixel: (x: number, y: number, isInk: boolean) => void;
   onDrawLine: (start: Point, end: Point) => void;
@@ -22,6 +29,8 @@ interface SceneCanvasProps {
   onSetLinePreview: (point: Point | null) => void;
   onBucketFill: (x: number, y: number) => void;
   onPixelSizeChange: (size: number) => void;
+  onBackgroundMove: (x: number, y: number) => void;
+  onBackgroundScale: (scale: number) => void;
 }
 
 export function SceneCanvas({
@@ -33,6 +42,13 @@ export function SceneCanvas({
   linePreview,
   isDrawing,
   showGrid,
+  backgroundImage,
+  backgroundOpacity,
+  backgroundEnabled,
+  backgroundX,
+  backgroundY,
+  backgroundScale,
+  backgroundAdjustMode,
   onSetIsDrawing,
   onSetPixel,
   onDrawLine,
@@ -40,9 +56,14 @@ export function SceneCanvas({
   onSetLinePreview,
   onBucketFill,
   onPixelSizeChange,
+  onBackgroundMove,
+  onBackgroundScale,
 }: SceneCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingBackground = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const initialBackgroundPos = useRef({ x: 0, y: 0 });
   const charsWidth = SCREEN_CHARS_WIDTH;
   const charsHeight = SCREEN_CHARS_HEIGHT;
   const canvasWidth = charsWidth * CHAR_SIZE;
@@ -77,6 +98,15 @@ export function SceneCanvas({
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // If in background adjust mode, scale the background instead
+      if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const newScale = Math.max(0.1, Math.min(5, backgroundScale + delta));
+        onBackgroundScale(newScale);
+        return;
+      }
+
       const delta = e.deltaY > 0 ? -1 : 1;
       const newSize = Math.max(1, Math.min(10, pixelSize + delta));
       if (newSize !== pixelSize) {
@@ -88,10 +118,25 @@ export function SceneCanvas({
     return () => {
       container.removeEventListener('wheel', handleWheel);
     };
-  }, [pixelSize, onPixelSizeChange]);
+  }, [pixelSize, onPixelSizeChange, backgroundAdjustMode, backgroundImage, backgroundEnabled, backgroundScale, onBackgroundScale]);
 
   // Handle mouse down
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle background adjust mode (left click only)
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled && e.button === 0) {
+      isDraggingBackground.current = true;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        dragStart.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+        initialBackgroundPos.current = { x: backgroundX, y: backgroundY };
+      }
+      return;
+    }
+
     // Middle mouse button or space key for panning
     if (e.button === 1) {
       e.preventDefault();
@@ -128,10 +173,27 @@ export function SceneCanvas({
     } else if (currentTool === 'bucket') {
       onBucketFill(coords.x, coords.y);
     }
-  }, [currentTool, lineStart, panOffset, getPixelCoords, onSetIsDrawing, onSetPixel, onDrawLine, onSetLineStart, onSetLinePreview, onBucketFill]);
+  }, [currentTool, lineStart, panOffset, getPixelCoords, onSetIsDrawing, onSetPixel, onDrawLine, onSetLineStart, onSetLinePreview, onBucketFill, backgroundAdjustMode, backgroundImage, backgroundEnabled, backgroundX, backgroundY]);
 
   // Handle mouse move
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle background dragging
+    if (isDraggingBackground.current && backgroundAdjustMode) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        const deltaX = (currentX - dragStart.current.x) / pixelSize;
+        const deltaY = (currentY - dragStart.current.y) / pixelSize;
+        onBackgroundMove(
+          initialBackgroundPos.current.x + deltaX,
+          initialBackgroundPos.current.y + deltaY
+        );
+      }
+      return;
+    }
+
     if (isPanning) {
       setPanOffset({
         x: e.clientX - panStart.x,
@@ -150,10 +212,12 @@ export function SceneCanvas({
     } else if (currentTool === 'line' && lineStart) {
       onSetLinePreview(coords);
     }
-  }, [currentTool, isDrawing, isPanning, lineStart, panStart, getPixelCoords, onSetPixel, onSetLinePreview]);
+  }, [currentTool, isDrawing, isPanning, lineStart, panStart, getPixelCoords, onSetPixel, onSetLinePreview, backgroundAdjustMode, pixelSize, onBackgroundMove]);
 
   // Handle mouse up
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    isDraggingBackground.current = false;
+
     if (isPanning) {
       setIsPanning(false);
       return;
@@ -166,6 +230,8 @@ export function SceneCanvas({
 
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
+    isDraggingBackground.current = false;
+
     if (isPanning) {
       setIsPanning(false);
     }
@@ -190,6 +256,21 @@ export function SceneCanvas({
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw background image for tracing (editor-only)
+    if (backgroundImage && backgroundEnabled) {
+      ctx.globalAlpha = backgroundOpacity;
+      const scaledWidth = canvas.width * backgroundScale;
+      const scaledHeight = canvas.height * backgroundScale;
+      ctx.drawImage(
+        backgroundImage,
+        backgroundX * pixelSize,
+        backgroundY * pixelSize,
+        scaledWidth,
+        scaledHeight
+      );
+      ctx.globalAlpha = 1;
+    }
+
     // Draw pixels with ZX Spectrum colours
     for (let charY = 0; charY < charsHeight; charY++) {
       for (let charX = 0; charX < charsWidth; charX++) {
@@ -203,6 +284,12 @@ export function SceneCanvas({
             const pixelX = charX * CHAR_SIZE + px;
             const pixelY = charY * CHAR_SIZE + py;
             const isInk = pixels[pixelY]?.[pixelX] || false;
+
+            // Skip drawing paper pixels when background image is visible
+            // so the trace image shows through empty areas
+            if (!isInk && backgroundImage && backgroundEnabled) {
+              continue;
+            }
 
             ctx.fillStyle = isInk ? inkColour : paperColour;
             ctx.fillRect(
@@ -272,7 +359,7 @@ export function SceneCanvas({
         }
       });
     }
-  }, [pixels, attributes, pixelSize, charsWidth, charsHeight, canvasWidth, canvasHeight, lineStart, linePreview, showGrid]);
+  }, [pixels, attributes, pixelSize, charsWidth, charsHeight, canvasWidth, canvasHeight, lineStart, linePreview, showGrid, backgroundImage, backgroundOpacity, backgroundEnabled, backgroundX, backgroundY, backgroundScale]);
 
   return (
     <div className="relative h-[calc(100vh-40px)]">
@@ -295,7 +382,7 @@ export function SceneCanvas({
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
             onContextMenu={handleContextMenu}
-            className={`border border-gray-600 ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+            className={`border border-gray-600 ${backgroundAdjustMode ? 'cursor-move' : isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
             style={{ imageRendering: 'pixelated' }}
           />
         </div>

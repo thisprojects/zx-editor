@@ -7,6 +7,29 @@ describe('SceneCanvas component', () => {
   const canvasWidth = SCREEN_CHARS_WIDTH * CHAR_SIZE; // 256
   const canvasHeight = SCREEN_CHARS_HEIGHT * CHAR_SIZE; // 192
 
+  // Mock canvas context
+  const mockDrawImage = jest.fn();
+  const mockFillRect = jest.fn();
+  const mockClearRect = jest.fn();
+  const mockBeginPath = jest.fn();
+  const mockMoveTo = jest.fn();
+  const mockLineTo = jest.fn();
+  const mockStroke = jest.fn();
+
+  const mockContext = {
+    drawImage: mockDrawImage,
+    fillRect: mockFillRect,
+    clearRect: mockClearRect,
+    beginPath: mockBeginPath,
+    moveTo: mockMoveTo,
+    lineTo: mockLineTo,
+    stroke: mockStroke,
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 1,
+    globalAlpha: 1,
+  };
+
   const createDefaultProps = () => {
     const pixels: boolean[][] = Array(canvasHeight).fill(null).map(() =>
       Array(canvasWidth).fill(false)
@@ -24,6 +47,13 @@ describe('SceneCanvas component', () => {
       linePreview: null,
       isDrawing: false,
       showGrid: false,
+      backgroundImage: null as HTMLImageElement | null,
+      backgroundOpacity: 0.3,
+      backgroundEnabled: true,
+      backgroundX: 0,
+      backgroundY: 0,
+      backgroundScale: 1,
+      backgroundAdjustMode: false,
       onSetIsDrawing: jest.fn(),
       onSetPixel: jest.fn(),
       onDrawLine: jest.fn(),
@@ -31,11 +61,14 @@ describe('SceneCanvas component', () => {
       onSetLinePreview: jest.fn(),
       onBucketFill: jest.fn(),
       onPixelSizeChange: jest.fn(),
+      onBackgroundMove: jest.fn(),
+      onBackgroundScale: jest.fn(),
     };
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    HTMLCanvasElement.prototype.getContext = jest.fn(() => mockContext) as jest.Mock;
   });
 
   describe('rendering', () => {
@@ -754,6 +787,228 @@ describe('SceneCanvas component', () => {
       fireEvent.mouseMove(canvas, { clientX: 30, clientY: canvasHeight * 3 + 10 });
 
       expect(props.onSetPixel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('background image rendering', () => {
+    it('should not render background when no image is loaded', () => {
+      const props = createDefaultProps();
+      props.backgroundImage = null;
+      props.backgroundEnabled = true;
+
+      render(<SceneCanvas {...props} />);
+
+      expect(mockDrawImage).not.toHaveBeenCalled();
+    });
+
+    it('should not render background when disabled', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = false;
+
+      render(<SceneCanvas {...props} />);
+
+      expect(mockDrawImage).not.toHaveBeenCalled();
+    });
+
+    it('should render background when image loaded and enabled', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundOpacity = 0.5;
+      props.pixelSize = 3;
+
+      render(<SceneCanvas {...props} />);
+
+      expect(mockDrawImage).toHaveBeenCalledWith(mockImage, 0, 0, canvasWidth * 3, canvasHeight * 3);
+    });
+
+    it('should apply correct opacity to background', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundOpacity = 0.5;
+
+      let capturedAlpha: number | null = null;
+      mockDrawImage.mockImplementation(() => {
+        capturedAlpha = mockContext.globalAlpha;
+      });
+
+      render(<SceneCanvas {...props} />);
+
+      expect(capturedAlpha).toBe(0.5);
+    });
+
+    it('should reset opacity after drawing background', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundOpacity = 0.3;
+
+      // Set some ink pixels so fillRect gets called (paper pixels are skipped when background is enabled)
+      props.pixels[0][0] = true;
+
+      let alphaAfterDraw: number | null = null;
+      mockFillRect.mockImplementation(() => {
+        alphaAfterDraw = mockContext.globalAlpha;
+      });
+
+      render(<SceneCanvas {...props} />);
+
+      expect(alphaAfterDraw).toBe(1);
+    });
+
+    it('should render background at specified position', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundX = 10;
+      props.backgroundY = 20;
+      props.backgroundScale = 1;
+      props.pixelSize = 3;
+
+      render(<SceneCanvas {...props} />);
+
+      // Position should be multiplied by pixelSize (3)
+      expect(mockDrawImage).toHaveBeenCalledWith(
+        mockImage,
+        30, // 10 * 3
+        60, // 20 * 3
+        canvasWidth * 3,
+        canvasHeight * 3
+      );
+    });
+
+    it('should render background with specified scale', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundX = 0;
+      props.backgroundY = 0;
+      props.backgroundScale = 2;
+      props.pixelSize = 3;
+
+      render(<SceneCanvas {...props} />);
+
+      // Dimensions should be scaled
+      expect(mockDrawImage).toHaveBeenCalledWith(
+        mockImage,
+        0,
+        0,
+        canvasWidth * 3 * 2,
+        canvasHeight * 3 * 2
+      );
+    });
+  });
+
+  describe('background adjust mode', () => {
+    it('should show move cursor when adjust mode is enabled', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundAdjustMode = true;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas');
+      expect(canvas).toHaveClass('cursor-move');
+    });
+
+    it('should show crosshair cursor when adjust mode is disabled and not panning', () => {
+      const props = createDefaultProps();
+      props.backgroundAdjustMode = false;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas');
+      expect(canvas).toHaveClass('cursor-crosshair');
+    });
+
+    it('should call onBackgroundMove when dragging in adjust mode', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundAdjustMode = true;
+      props.backgroundX = 0;
+      props.backgroundY = 0;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas')!;
+
+      // Simulate drag with left click (button 0)
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 0 });
+      fireEvent.mouseMove(canvas, { clientX: 150, clientY: 120 });
+      fireEvent.mouseUp(canvas, { button: 0 });
+
+      expect(props.onBackgroundMove).toHaveBeenCalled();
+    });
+
+    it('should not call onSetPixel when clicking in adjust mode', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundAdjustMode = true;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas')!;
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 0 });
+
+      expect(props.onSetPixel).not.toHaveBeenCalled();
+    });
+
+    it('should stop dragging on mouse up', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundAdjustMode = true;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 0 });
+      fireEvent.mouseUp(canvas, { button: 0 });
+
+      // Clear the mock to check subsequent moves don't trigger callback
+      props.onBackgroundMove.mockClear();
+
+      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
+
+      expect(props.onBackgroundMove).not.toHaveBeenCalled();
+    });
+
+    it('should stop dragging on mouse leave', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      props.backgroundAdjustMode = true;
+
+      render(<SceneCanvas {...props} />);
+
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 0 });
+      fireEvent.mouseLeave(canvas);
+
+      // Clear the mock to check subsequent moves don't trigger callback
+      props.onBackgroundMove.mockClear();
+
+      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
+
+      expect(props.onBackgroundMove).not.toHaveBeenCalled();
     });
   });
 });

@@ -67,6 +67,17 @@ export default function SpriteEditorPage() {
           onResize={drawing.resizeCanvas}
           pixelSize={pixelSize}
           onPixelSizeChange={setPixelSize}
+          backgroundImage={drawing.backgroundImage}
+          backgroundEnabled={drawing.backgroundEnabled}
+          backgroundOpacity={drawing.backgroundOpacity}
+          backgroundScale={drawing.backgroundScale}
+          backgroundAdjustMode={drawing.backgroundAdjustMode}
+          onBackgroundEnabledChange={drawing.setBackgroundEnabled}
+          onBackgroundOpacityChange={drawing.setBackgroundOpacity}
+          onBackgroundScaleChange={drawing.setBackgroundScale}
+          onBackgroundAdjustModeChange={drawing.setBackgroundAdjustMode}
+          onLoadBackgroundImage={drawing.loadBackgroundImage}
+          onClearBackgroundImage={drawing.clearBackgroundImage}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
@@ -99,12 +110,24 @@ export default function SpriteEditorPage() {
           lineStart={drawing.lineStart}
           linePreview={drawing.linePreview}
           isDrawing={drawing.isDrawing}
+          backgroundImage={drawing.backgroundImage}
+          backgroundOpacity={drawing.backgroundOpacity}
+          backgroundEnabled={drawing.backgroundEnabled}
+          backgroundX={drawing.backgroundX}
+          backgroundY={drawing.backgroundY}
+          backgroundScale={drawing.backgroundScale}
+          backgroundAdjustMode={drawing.backgroundAdjustMode}
           onSetIsDrawing={drawing.setIsDrawing}
           onSetPixel={drawing.setPixel}
           onDrawLine={drawing.drawLine}
           onSetLineStart={drawing.setLineStart}
           onSetLinePreview={drawing.setLinePreview}
           onBucketFill={drawing.bucketFill}
+          onBackgroundMove={(x, y) => {
+            drawing.setBackgroundX(x);
+            drawing.setBackgroundY(y);
+          }}
+          onBackgroundScale={drawing.setBackgroundScale}
         />
       </div>
 

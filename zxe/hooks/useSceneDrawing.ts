@@ -34,6 +34,15 @@ export function useSceneDrawing() {
   // Attribute data (per character cell)
   const [attributes, setAttributes] = useState<Attribute[][]>(createDefaultAttributes);
 
+  // Background image for tracing (editor-only, not saved)
+  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(0.3);
+  const [backgroundEnabled, setBackgroundEnabled] = useState(true);
+  const [backgroundX, setBackgroundX] = useState(0);
+  const [backgroundY, setBackgroundY] = useState(0);
+  const [backgroundScale, setBackgroundScale] = useState(1);
+  const [backgroundAdjustMode, setBackgroundAdjustMode] = useState(false);
+
   // Current drawing colors
   const [currentInk, setCurrentInk] = useState(7);  // White
   const [currentPaper, setCurrentPaper] = useState(0); // Black (for bucket fill)
@@ -158,6 +167,22 @@ export function useSceneDrawing() {
     setLinePreview(null);
   }, []);
 
+  // Load background image for tracing
+  const loadBackgroundImage = useCallback((file: File) => {
+    const img = new Image();
+    img.onload = () => setBackgroundImage(img);
+    img.src = URL.createObjectURL(file);
+  }, []);
+
+  // Clear background image
+  const clearBackgroundImage = useCallback(() => {
+    setBackgroundImage(null);
+    setBackgroundX(0);
+    setBackgroundY(0);
+    setBackgroundScale(1);
+    setBackgroundAdjustMode(false);
+  }, []);
+
   return {
     // Dimensions (fixed for full screen)
     charsWidth,
@@ -195,5 +220,22 @@ export function useSceneDrawing() {
     bucketFill,
     clearCanvas,
     loadProjectData,
+
+    // Background image (editor-only)
+    backgroundImage,
+    backgroundOpacity,
+    setBackgroundOpacity,
+    backgroundEnabled,
+    setBackgroundEnabled,
+    backgroundX,
+    setBackgroundX,
+    backgroundY,
+    setBackgroundY,
+    backgroundScale,
+    setBackgroundScale,
+    backgroundAdjustMode,
+    setBackgroundAdjustMode,
+    loadBackgroundImage,
+    clearBackgroundImage,
   };
 }

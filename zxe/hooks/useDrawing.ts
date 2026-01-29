@@ -15,6 +15,15 @@ export function useDrawing({
   const [charsWidth, setCharsWidth] = useState(initialCharsWidth);
   const [charsHeight, setCharsHeight] = useState(initialCharsHeight);
 
+  // Background image for tracing (editor-only, not saved)
+  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(0.3);
+  const [backgroundEnabled, setBackgroundEnabled] = useState(true);
+  const [backgroundX, setBackgroundX] = useState(0);
+  const [backgroundY, setBackgroundY] = useState(0);
+  const [backgroundScale, setBackgroundScale] = useState(1);
+  const [backgroundAdjustMode, setBackgroundAdjustMode] = useState(false);
+
   const canvasWidth = charsWidth * CHAR_SIZE;
   const canvasHeight = charsHeight * CHAR_SIZE;
 
@@ -201,6 +210,22 @@ export function useDrawing({
     setLinePreview(null);
   }, []);
 
+  // Load background image for tracing
+  const loadBackgroundImage = useCallback((file: File) => {
+    const img = new Image();
+    img.onload = () => setBackgroundImage(img);
+    img.src = URL.createObjectURL(file);
+  }, []);
+
+  // Clear background image
+  const clearBackgroundImage = useCallback(() => {
+    setBackgroundImage(null);
+    setBackgroundX(0);
+    setBackgroundY(0);
+    setBackgroundScale(1);
+    setBackgroundAdjustMode(false);
+  }, []);
+
   return {
     // Canvas dimensions
     charsWidth,
@@ -235,5 +260,22 @@ export function useDrawing({
     clearCanvas,
     resizeCanvas,
     loadProjectData,
+
+    // Background image (editor-only)
+    backgroundImage,
+    backgroundOpacity,
+    setBackgroundOpacity,
+    backgroundEnabled,
+    setBackgroundEnabled,
+    backgroundX,
+    setBackgroundX,
+    backgroundY,
+    setBackgroundY,
+    backgroundScale,
+    setBackgroundScale,
+    backgroundAdjustMode,
+    setBackgroundAdjustMode,
+    loadBackgroundImage,
+    clearBackgroundImage,
   };
 }

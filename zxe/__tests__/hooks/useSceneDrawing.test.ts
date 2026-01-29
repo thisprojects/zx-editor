@@ -432,4 +432,107 @@ describe('useSceneDrawing hook', () => {
       expect(result.current.linePreview).toEqual({ x: 30, y: 40 });
     });
   });
+
+  describe('background image state', () => {
+    it('should initialize with default background values', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      expect(result.current.backgroundImage).toBeNull();
+      expect(result.current.backgroundOpacity).toBe(0.3);
+      expect(result.current.backgroundEnabled).toBe(true);
+      expect(result.current.backgroundX).toBe(0);
+      expect(result.current.backgroundY).toBe(0);
+      expect(result.current.backgroundScale).toBe(1);
+      expect(result.current.backgroundAdjustMode).toBe(false);
+    });
+
+    it('should update backgroundOpacity', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundOpacity(0.6);
+      });
+
+      expect(result.current.backgroundOpacity).toBe(0.6);
+    });
+
+    it('should update backgroundEnabled', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundEnabled(false);
+      });
+
+      expect(result.current.backgroundEnabled).toBe(false);
+    });
+
+    it('should update backgroundX', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundX(15);
+      });
+
+      expect(result.current.backgroundX).toBe(15);
+    });
+
+    it('should update backgroundY', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundY(25);
+      });
+
+      expect(result.current.backgroundY).toBe(25);
+    });
+
+    it('should update backgroundScale', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundScale(1.5);
+      });
+
+      expect(result.current.backgroundScale).toBe(1.5);
+    });
+
+    it('should update backgroundAdjustMode', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      act(() => {
+        result.current.setBackgroundAdjustMode(true);
+      });
+
+      expect(result.current.backgroundAdjustMode).toBe(true);
+    });
+
+    it('should reset all background values when clearing background image', () => {
+      const { result } = renderHook(() => useSceneDrawing());
+
+      // Set some values first
+      act(() => {
+        result.current.setBackgroundX(15);
+        result.current.setBackgroundY(25);
+        result.current.setBackgroundScale(1.5);
+        result.current.setBackgroundAdjustMode(true);
+      });
+
+      expect(result.current.backgroundX).toBe(15);
+      expect(result.current.backgroundY).toBe(25);
+      expect(result.current.backgroundScale).toBe(1.5);
+      expect(result.current.backgroundAdjustMode).toBe(true);
+
+      // Clear background image
+      act(() => {
+        result.current.clearBackgroundImage();
+      });
+
+      // All values should be reset
+      expect(result.current.backgroundImage).toBeNull();
+      expect(result.current.backgroundX).toBe(0);
+      expect(result.current.backgroundY).toBe(0);
+      expect(result.current.backgroundScale).toBe(1);
+      expect(result.current.backgroundAdjustMode).toBe(false);
+    });
+  });
 });

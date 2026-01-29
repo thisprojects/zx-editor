@@ -32,6 +32,13 @@ jest.mock('@/hooks/useDrawing', () => ({
     clearCanvas: jest.fn(),
     resizeCanvas: jest.fn(),
     loadProjectData: jest.fn(),
+    backgroundImage: null,
+    backgroundOpacity: 0.3,
+    backgroundEnabled: true,
+    setBackgroundOpacity: jest.fn(),
+    setBackgroundEnabled: jest.fn(),
+    loadBackgroundImage: jest.fn(),
+    clearBackgroundImage: jest.fn(),
   }),
 }));
 
@@ -166,10 +173,18 @@ describe('Sprite Editor page', () => {
   });
 
   describe('file input', () => {
-    it('should accept .json files', () => {
+    it('should accept .json files for project load', () => {
       render(<SpriteEditorPage />);
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('accept', '.json');
+      const fileInput = document.querySelector('input[type="file"][accept=".json"]');
+      expect(fileInput).toBeInTheDocument();
+      expect(fileInput).toHaveClass('hidden');
+    });
+
+    it('should accept image files for trace image', () => {
+      render(<SpriteEditorPage />);
+      const imageInput = document.querySelector('input[type="file"][accept="image/*"]');
+      expect(imageInput).toBeInTheDocument();
+      expect(imageInput).toHaveClass('hidden');
     });
   });
 

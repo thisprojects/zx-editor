@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Tool } from '@/types';
 import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine } from 'react-icons/tb';
@@ -17,6 +18,17 @@ interface SceneToolbarContentProps {
   onPixelSizeChange: (size: number) => void;
   showGrid: boolean;
   onToggleGrid: () => void;
+  backgroundImage: HTMLImageElement | null;
+  backgroundEnabled: boolean;
+  backgroundOpacity: number;
+  backgroundScale: number;
+  backgroundAdjustMode: boolean;
+  onBackgroundEnabledChange: (enabled: boolean) => void;
+  onBackgroundOpacityChange: (opacity: number) => void;
+  onBackgroundScaleChange: (scale: number) => void;
+  onBackgroundAdjustModeChange: (enabled: boolean) => void;
+  onLoadBackgroundImage: (file: File) => void;
+  onClearBackgroundImage: () => void;
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -34,11 +46,35 @@ export function SceneToolbarContent({
   onPixelSizeChange,
   showGrid,
   onToggleGrid,
+  backgroundImage,
+  backgroundEnabled,
+  backgroundOpacity,
+  backgroundScale,
+  backgroundAdjustMode,
+  onBackgroundEnabledChange,
+  onBackgroundOpacityChange,
+  onBackgroundScaleChange,
+  onBackgroundAdjustModeChange,
+  onLoadBackgroundImage,
+  onClearBackgroundImage,
   onLoad,
   onSave,
   onExport,
   onClear,
 }: SceneToolbarContentProps) {
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBackgroundFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onLoadBackgroundImage(file);
+    }
+    // Reset input so the same file can be selected again
+    if (backgroundInputRef.current) {
+      backgroundInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
       {/* Screen info */}
@@ -167,6 +203,95 @@ export function SceneToolbarContent({
             <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
           </div>
         </div>
+      </div>
+
+      {/* Trace Image */}
+      <div className="border border-gray-600 rounded p-2 mt-4">
+        <div className="text-xs text-gray-400 mb-1">Trace Image</div>
+        <input
+          ref={backgroundInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleBackgroundFileChange}
+          className="hidden"
+        />
+        <button
+          onClick={() => backgroundInputRef.current?.click()}
+          className="w-full px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600 text-xs mb-1"
+        >
+          Load Image
+        </button>
+        {backgroundImage && (
+          <>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-400">Enabled</span>
+              <button
+                onClick={() => onBackgroundEnabledChange(!backgroundEnabled)}
+                className={`w-10 h-5 rounded-full relative transition-colors ${
+                  backgroundEnabled ? 'bg-purple-500' : 'bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                    backgroundEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            {backgroundEnabled && (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-400">Adjust</span>
+                  <button
+                    onClick={() => onBackgroundAdjustModeChange(!backgroundAdjustMode)}
+                    className={`w-10 h-5 rounded-full relative transition-colors ${
+                      backgroundAdjustMode ? 'bg-orange-500' : 'bg-gray-600'
+                    }`}
+                    title="Enable to drag and scale the background image"
+                  >
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        backgroundAdjustMode ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="mb-1">
+                  <div className="text-xs text-gray-400 mb-1">
+                    Opacity: {Math.round(backgroundOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={80}
+                    value={backgroundOpacity * 100}
+                    onChange={(e) => onBackgroundOpacityChange(parseInt(e.target.value) / 100)}
+                    className="w-full accent-purple-500 h-1"
+                  />
+                </div>
+                <div className="mb-1">
+                  <div className="text-xs text-gray-400 mb-1">
+                    Scale: {Math.round(backgroundScale * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={500}
+                    value={backgroundScale * 100}
+                    onChange={(e) => onBackgroundScaleChange(parseInt(e.target.value) / 100)}
+                    className="w-full accent-purple-500 h-1"
+                  />
+                </div>
+              </>
+            )}
+            <button
+              onClick={onClearBackgroundImage}
+              className="w-full px-2 py-1 rounded bg-gray-700 text-white hover:bg-gray-600 text-xs"
+            >
+              Clear Image
+            </button>
+          </>
+        )}
       </div>
 
       {/* File operations */}

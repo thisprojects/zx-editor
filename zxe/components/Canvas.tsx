@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Tool, Attribute, Point } from '@/types';
 import { CHAR_SIZE } from '@/constants';
 import { getColourHex } from '@/utils/colors';
@@ -16,12 +16,21 @@ interface CanvasProps {
   lineStart: Point | null;
   linePreview: Point | null;
   isDrawing: boolean;
+  backgroundImage: HTMLImageElement | null;
+  backgroundOpacity: number;
+  backgroundEnabled: boolean;
+  backgroundX: number;
+  backgroundY: number;
+  backgroundScale: number;
+  backgroundAdjustMode: boolean;
   onSetIsDrawing: (drawing: boolean) => void;
   onSetPixel: (x: number, y: number, isInk: boolean) => void;
   onDrawLine: (start: Point, end: Point) => void;
   onSetLineStart: (point: Point | null) => void;
   onSetLinePreview: (point: Point | null) => void;
   onBucketFill: (x: number, y: number) => void;
+  onBackgroundMove: (x: number, y: number) => void;
+  onBackgroundScale: (scale: number) => void;
 }
 
 export function Canvas({
@@ -34,14 +43,26 @@ export function Canvas({
   lineStart,
   linePreview,
   isDrawing,
+  backgroundImage,
+  backgroundOpacity,
+  backgroundEnabled,
+  backgroundX,
+  backgroundY,
+  backgroundScale,
+  backgroundAdjustMode,
   onSetIsDrawing,
   onSetPixel,
   onDrawLine,
   onSetLineStart,
   onSetLinePreview,
   onBucketFill,
+  onBackgroundMove,
+  onBackgroundScale,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDraggingBackground = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const initialBackgroundPos = useRef({ x: 0, y: 0 });
 
   const canvasWidth = charsWidth * CHAR_SIZE;
   const canvasHeight = charsHeight * CHAR_SIZE;
@@ -52,6 +73,24 @@ export function Canvas({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Clear canvas first
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw background image for tracing (editor-only)
+    if (backgroundImage && backgroundEnabled) {
+      ctx.globalAlpha = backgroundOpacity;
+      const scaledWidth = canvas.width * backgroundScale;
+      const scaledHeight = canvas.height * backgroundScale;
+      ctx.drawImage(
+        backgroundImage,
+        backgroundX * pixelSize,
+        backgroundY * pixelSize,
+        scaledWidth,
+        scaledHeight
+      );
+      ctx.globalAlpha = 1;
+    }
 
     // Draw each character cell
     for (let charY = 0; charY < charsHeight; charY++) {
@@ -66,6 +105,12 @@ export function Canvas({
             const pixelX = charX * CHAR_SIZE + px;
             const pixelY = charY * CHAR_SIZE + py;
             const isInk = pixels[pixelY][pixelX];
+
+            // Skip drawing paper pixels when background image is visible
+            // so the trace image shows through empty areas
+            if (!isInk && backgroundImage && backgroundEnabled) {
+              continue;
+            }
 
             ctx.fillStyle = isInk ? inkColour : paperColour;
             ctx.fillRect(pixelX * pixelSize, pixelY * pixelSize, pixelSize, pixelSize);
@@ -116,7 +161,7 @@ export function Canvas({
         ctx.fillRect(point.x * pixelSize + 2, point.y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
       }
     }
-  }, [pixels, attributes, canvasHeight, canvasWidth, charsWidth, charsHeight, currentTool, lineStart, linePreview, pixelSize]);
+  }, [pixels, attributes, canvasHeight, canvasWidth, charsWidth, charsHeight, currentTool, lineStart, linePreview, pixelSize, backgroundImage, backgroundOpacity, backgroundEnabled, backgroundX, backgroundY, backgroundScale]);
 
   useEffect(() => {
     drawCanvas();
@@ -137,6 +182,21 @@ export function Canvas({
 
   // Handle mouse events
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle background adjust mode
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+      isDraggingBackground.current = true;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        dragStart.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+        initialBackgroundPos.current = { x: backgroundX, y: backgroundY };
+      }
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -161,6 +221,23 @@ export function Canvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle background dragging
+    if (isDraggingBackground.current && backgroundAdjustMode) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        const deltaX = (currentX - dragStart.current.x) / pixelSize;
+        const deltaY = (currentY - dragStart.current.y) / pixelSize;
+        onBackgroundMove(
+          initialBackgroundPos.current.x + deltaX,
+          initialBackgroundPos.current.y + deltaY
+        );
+      }
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -174,16 +251,30 @@ export function Canvas({
   };
 
   const handleMouseUp = () => {
+    isDraggingBackground.current = false;
     onSetIsDrawing(false);
   };
 
   const handleMouseLeave = () => {
+    isDraggingBackground.current = false;
     onSetIsDrawing(false);
+  };
+
+  // Handle wheel for background scaling in adjust mode
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.max(0.1, Math.min(5, backgroundScale + delta));
+      onBackgroundScale(newScale);
+    }
   };
 
   // Get status message
   const getStatusMessage = () => {
-    if (currentTool === 'line' && lineStart) {
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+      return 'Drag to move image, scroll to scale';
+    } else if (currentTool === 'line' && lineStart) {
       return 'Click to set line end point';
     } else if (currentTool === 'line') {
       return 'Click to set line start point';
@@ -207,7 +298,8 @@ export function Canvas({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          className="cursor-crosshair border border-gray-600"
+          onWheel={handleWheel}
+          className={`border border-gray-600 ${backgroundAdjustMode ? 'cursor-move' : 'cursor-crosshair'}`}
         />
       </div>
 

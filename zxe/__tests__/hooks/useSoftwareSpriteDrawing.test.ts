@@ -512,4 +512,107 @@ describe('useSoftwareSpriteDrawing', () => {
       expect(result.current.attributes[0][0].ink).toBe(1);
     });
   });
+
+  describe('background image state', () => {
+    it('should initialize with default background values', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      expect(result.current.backgroundImage).toBeNull();
+      expect(result.current.backgroundOpacity).toBe(0.3);
+      expect(result.current.backgroundEnabled).toBe(true);
+      expect(result.current.backgroundX).toBe(0);
+      expect(result.current.backgroundY).toBe(0);
+      expect(result.current.backgroundScale).toBe(1);
+      expect(result.current.backgroundAdjustMode).toBe(false);
+    });
+
+    it('should update backgroundOpacity', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundOpacity(0.7);
+      });
+
+      expect(result.current.backgroundOpacity).toBe(0.7);
+    });
+
+    it('should update backgroundEnabled', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundEnabled(false);
+      });
+
+      expect(result.current.backgroundEnabled).toBe(false);
+    });
+
+    it('should update backgroundX', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundX(5);
+      });
+
+      expect(result.current.backgroundX).toBe(5);
+    });
+
+    it('should update backgroundY', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundY(8);
+      });
+
+      expect(result.current.backgroundY).toBe(8);
+    });
+
+    it('should update backgroundScale', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundScale(3);
+      });
+
+      expect(result.current.backgroundScale).toBe(3);
+    });
+
+    it('should update backgroundAdjustMode', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => {
+        result.current.setBackgroundAdjustMode(true);
+      });
+
+      expect(result.current.backgroundAdjustMode).toBe(true);
+    });
+
+    it('should reset all background values when clearing background image', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      // Set some values first
+      act(() => {
+        result.current.setBackgroundX(5);
+        result.current.setBackgroundY(8);
+        result.current.setBackgroundScale(3);
+        result.current.setBackgroundAdjustMode(true);
+      });
+
+      expect(result.current.backgroundX).toBe(5);
+      expect(result.current.backgroundY).toBe(8);
+      expect(result.current.backgroundScale).toBe(3);
+      expect(result.current.backgroundAdjustMode).toBe(true);
+
+      // Clear background image
+      act(() => {
+        result.current.clearBackgroundImage();
+      });
+
+      // All values should be reset
+      expect(result.current.backgroundImage).toBeNull();
+      expect(result.current.backgroundX).toBe(0);
+      expect(result.current.backgroundY).toBe(0);
+      expect(result.current.backgroundScale).toBe(1);
+      expect(result.current.backgroundAdjustMode).toBe(false);
+    });
+  });
 });
