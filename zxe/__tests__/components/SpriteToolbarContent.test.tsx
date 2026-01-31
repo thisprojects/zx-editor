@@ -14,6 +14,17 @@ describe('SpriteToolbarContent', () => {
     onResize: jest.fn(),
     pixelSize: 10,
     onPixelSizeChange: jest.fn(),
+    backgroundImage: null as HTMLImageElement | null,
+    backgroundEnabled: false,
+    backgroundOpacity: 0.3,
+    backgroundScale: 1,
+    backgroundAdjustMode: false,
+    onBackgroundEnabledChange: jest.fn(),
+    onBackgroundOpacityChange: jest.fn(),
+    onBackgroundScaleChange: jest.fn(),
+    onBackgroundAdjustModeChange: jest.fn(),
+    onLoadBackgroundImage: jest.fn(),
+    onClearBackgroundImage: jest.fn(),
     onLoad: jest.fn(),
     onSave: jest.fn(),
     onExport: jest.fn(),
@@ -41,6 +52,7 @@ describe('SpriteToolbarContent', () => {
       expect(screen.getByTitle('Line')).toBeInTheDocument();
       expect(screen.getByTitle('Rubber')).toBeInTheDocument();
       expect(screen.getByTitle('Bucket Fill (Paper)')).toBeInTheDocument();
+      expect(screen.getByTitle('Pan (or right-click drag)')).toBeInTheDocument();
     });
 
     it('should render bright toggle', () => {
@@ -124,6 +136,19 @@ describe('SpriteToolbarContent', () => {
     it('should highlight bucket tool when selected', () => {
       render(<SpriteToolbarContent {...defaultProps} currentTool="bucket" />);
       expect(screen.getByTitle('Bucket Fill (Paper)')).toHaveClass('bg-blue-600');
+    });
+
+    it('should call onSelectTool when pan is clicked', () => {
+      const onSelectTool = jest.fn();
+      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
+
+      fireEvent.click(screen.getByTitle('Pan (or right-click drag)'));
+      expect(onSelectTool).toHaveBeenCalledWith('pan');
+    });
+
+    it('should highlight pan tool when selected', () => {
+      render(<SpriteToolbarContent {...defaultProps} currentTool="pan" />);
+      expect(screen.getByTitle('Pan (or right-click drag)')).toHaveClass('bg-blue-600');
     });
   });
 

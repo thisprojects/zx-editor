@@ -13,6 +13,17 @@ describe('SceneToolbarContent', () => {
     onPixelSizeChange: jest.fn(),
     showGrid: true,
     onToggleGrid: jest.fn(),
+    backgroundImage: null as HTMLImageElement | null,
+    backgroundEnabled: false,
+    backgroundOpacity: 0.3,
+    backgroundScale: 1,
+    backgroundAdjustMode: false,
+    onBackgroundEnabledChange: jest.fn(),
+    onBackgroundOpacityChange: jest.fn(),
+    onBackgroundScaleChange: jest.fn(),
+    onBackgroundAdjustModeChange: jest.fn(),
+    onLoadBackgroundImage: jest.fn(),
+    onClearBackgroundImage: jest.fn(),
     onLoad: jest.fn(),
     onSave: jest.fn(),
     onExport: jest.fn(),
@@ -86,6 +97,31 @@ describe('SceneToolbarContent', () => {
 
       const lineButton = screen.getByTitle('Line');
       expect(lineButton).not.toHaveClass('bg-blue-600');
+    });
+
+    it('should call onSelectTool when pan clicked', () => {
+      const props = createDefaultProps();
+      render(<SceneToolbarContent {...props} />);
+
+      fireEvent.click(screen.getByTitle('Pan (or right-click drag)'));
+
+      expect(props.onSelectTool).toHaveBeenCalledWith('pan');
+    });
+
+    it('should highlight pan tool when selected', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<SceneToolbarContent {...props} />);
+
+      const panButton = screen.getByTitle('Pan (or right-click drag)');
+      expect(panButton).toHaveClass('bg-blue-600');
+    });
+
+    it('should render pan tool button', () => {
+      const props = createDefaultProps();
+      render(<SceneToolbarContent {...props} />);
+
+      expect(screen.getByTitle('Pan (or right-click drag)')).toBeInTheDocument();
     });
   });
 

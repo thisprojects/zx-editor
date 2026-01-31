@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Tool, Attribute, Point, SoftwareSpriteFrame } from '@/types';
 import { CHAR_SIZE, SOFTWARE_SPRITE_SIZES } from '@/constants';
 import { getColourHex } from '@/utils/colors';
@@ -39,6 +39,7 @@ interface PlayerSpriteCanvasProps {
   onBucketFill: (x: number, y: number) => void;
   onBackgroundMove: (x: number, y: number) => void;
   onBackgroundScale: (scale: number) => void;
+  onPixelSizeChange: (size: number) => void;
 }
 
 export function PlayerSpriteCanvas({
@@ -74,11 +75,18 @@ export function PlayerSpriteCanvas({
   onBucketFill,
   onBackgroundMove,
   onBackgroundScale,
+  onPixelSizeChange,
 }: PlayerSpriteCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingBackground = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const initialBackgroundPos = useRef({ x: 0, y: 0 });
+
+  // Pan state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   const canvasWidth = spriteWidth;
   const canvasHeight = spriteHeight;
@@ -230,6 +238,39 @@ export function PlayerSpriteCanvas({
     drawCanvas();
   }, [drawCanvas]);
 
+  // Handle mouse wheel for zoom - use native event listener to properly prevent default
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // If in background adjust mode, scale the background instead
+      if (backgroundAdjustMode && backgroundImage && backgroundEnabled && !isPlaying) {
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const newScale = Math.max(0.1, Math.min(5, backgroundScale + delta));
+        onBackgroundScale(newScale);
+        return;
+      }
+
+      // Don't zoom during playback
+      if (isPlaying) return;
+
+      const delta = e.deltaY > 0 ? -1 : 1;
+      const newSize = Math.max(1, pixelSize + delta);
+      if (newSize !== pixelSize) {
+        onPixelSizeChange(newSize);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [pixelSize, onPixelSizeChange, backgroundAdjustMode, backgroundImage, backgroundEnabled, backgroundScale, onBackgroundScale, isPlaying]);
+
   // Get pixel coordinates from mouse event
   const getPixelCoords = (e: React.MouseEvent<HTMLCanvasElement>): Point | null => {
     const canvas = canvasRef.current;
@@ -247,8 +288,8 @@ export function PlayerSpriteCanvas({
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isPlaying) return;
 
-    // Handle background adjust mode
-    if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
+    // Handle background adjust mode (left click only)
+    if (backgroundAdjustMode && backgroundImage && backgroundEnabled && e.button === 0) {
       isDraggingBackground.current = true;
       const canvas = canvasRef.current;
       if (canvas) {
@@ -259,6 +300,29 @@ export function PlayerSpriteCanvas({
         };
         initialBackgroundPos.current = { x: backgroundX, y: backgroundY };
       }
+      return;
+    }
+
+    // Middle mouse button for panning
+    if (e.button === 1) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
+    // Right click for panning
+    if (e.button === 2) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
+    // Pan tool with left click
+    if (currentTool === 'pan' && e.button === 0) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
       return;
     }
 
@@ -305,6 +369,15 @@ export function PlayerSpriteCanvas({
       return;
     }
 
+    // Handle panning
+    if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -319,22 +392,24 @@ export function PlayerSpriteCanvas({
 
   const handleMouseUp = () => {
     isDraggingBackground.current = false;
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
     onSetIsDrawing(false);
   };
 
   const handleMouseLeave = () => {
     isDraggingBackground.current = false;
+    if (isPanning) {
+      setIsPanning(false);
+    }
     onSetIsDrawing(false);
   };
 
-  // Handle wheel for background scaling in adjust mode
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    if (backgroundAdjustMode && backgroundImage && backgroundEnabled && !isPlaying) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newScale = Math.max(0.1, Math.min(5, backgroundScale + delta));
-      onBackgroundScale(newScale);
-    }
+  // Prevent context menu on right click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
   };
 
   // Get status message
@@ -343,6 +418,8 @@ export function PlayerSpriteCanvas({
       return 'Animation playing...';
     } else if (backgroundAdjustMode && backgroundImage && backgroundEnabled) {
       return 'Drag to move image, scroll to scale';
+    } else if (currentTool === 'pan') {
+      return 'Click and drag to pan, scroll to zoom';
     } else if (currentTool === 'line' && lineStart) {
       return 'Click to set line end point';
     } else if (currentTool === 'line') {
@@ -351,8 +428,19 @@ export function PlayerSpriteCanvas({
       return 'Click and drag to draw';
     } else if (currentTool === 'bucket') {
       return 'Click to fill cell paper colour';
+    } else if (currentTool === 'rubber') {
+      return 'Click and drag to erase';
     }
-    return 'Click and drag to erase';
+    return 'Right-click to pan, scroll to zoom';
+  };
+
+  // Get cursor class
+  const getCursorClass = () => {
+    if (isPlaying) return 'cursor-default';
+    if (backgroundAdjustMode) return 'cursor-move';
+    if (isPanning) return 'cursor-grabbing';
+    if (currentTool === 'pan') return 'cursor-grab';
+    return 'cursor-crosshair';
   };
 
   // Get sprite info string
@@ -368,26 +456,34 @@ export function PlayerSpriteCanvas({
   return (
     <div className="p-4 h-screen flex flex-col">
       {/* Canvas */}
-      <div className="flex-1 bg-gray-800 rounded-lg p-4 overflow-auto flex items-center justify-center">
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth * pixelSize}
-          height={canvasHeight * pixelSize}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onWheel={handleWheel}
-          className={`border border-gray-600 ${isPlaying ? 'cursor-default' : backgroundAdjustMode ? 'cursor-move' : 'cursor-crosshair'}`}
-        />
-      </div>
-
-      {/* Info */}
-      <div className="mt-2 text-sm text-gray-400 text-center">
-        <p>{getStatusMessage()}</p>
-        <p className="text-xs mt-1">
-          {getSpriteInfo()} | Frame {currentFrameIndex + 1} of {totalFrames}
-        </p>
+      <div ref={containerRef} className="flex-1 bg-gray-800 rounded-lg p-4 overflow-auto flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div
+            style={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth * pixelSize}
+              height={canvasHeight * pixelSize}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onContextMenu={handleContextMenu}
+              className={`border border-gray-600 ${getCursorClass()}`}
+            />
+          </div>
+          {/* Info - right below canvas */}
+          <div className="mt-2 text-sm text-gray-400 text-center">
+            <p>{getStatusMessage()}</p>
+            <p className="text-xs mt-1">
+              {getSpriteInfo()} | Frame {currentFrameIndex + 1} of {totalFrames}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">Right-click drag to pan • Scroll to zoom</p>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -108,7 +108,7 @@ export function SceneCanvas({
       }
 
       const delta = e.deltaY > 0 ? -1 : 1;
-      const newSize = Math.max(1, Math.min(10, pixelSize + delta));
+      const newSize = Math.max(1, pixelSize + delta);
       if (newSize !== pixelSize) {
         onPixelSizeChange(newSize);
       }
@@ -148,6 +148,13 @@ export function SceneCanvas({
     // Right click also for panning
     if (e.button === 2) {
       e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
+    // Pan tool with left click
+    if (currentTool === 'pan' && e.button === 0) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
       return;
@@ -382,14 +389,15 @@ export function SceneCanvas({
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
             onContextMenu={handleContextMenu}
-            className={`border border-gray-600 ${backgroundAdjustMode ? 'cursor-move' : isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+            className={`border border-gray-600 ${backgroundAdjustMode ? 'cursor-move' : isPanning ? 'cursor-grabbing' : currentTool === 'pan' ? 'cursor-grab' : 'cursor-crosshair'}`}
             style={{ imageRendering: 'pixelated' }}
           />
         </div>
       </div>
-      {/* Zoom indicator - fixed outside canvas */}
-      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">
-        {pixelSize}x | {canvasWidth}×{canvasHeight}px
+      {/* Zoom indicator and instructions - fixed outside canvas */}
+      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none text-right">
+        <div>{pixelSize}x | {canvasWidth}×{canvasHeight}px</div>
+        <div className="text-gray-400">Right-click drag to pan • Scroll to zoom</div>
       </div>
     </div>
   );

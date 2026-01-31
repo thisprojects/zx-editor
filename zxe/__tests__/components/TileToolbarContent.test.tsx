@@ -137,6 +137,32 @@ describe('TileToolbarContent', () => {
       const rubberButton = screen.getByTitle('Rubber');
       expect(rubberButton).toHaveClass('bg-blue-600');
     });
+
+    it('should call onSelectTool when pan clicked', () => {
+      const props = createDefaultProps();
+      render(<TileToolbarContent {...props} />);
+
+      const panButton = screen.getByTitle('Pan (or right-click drag)');
+      fireEvent.click(panButton);
+
+      expect(props.onSelectTool).toHaveBeenCalledWith('pan');
+    });
+
+    it('should highlight pan tool when selected', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<TileToolbarContent {...props} />);
+
+      const panButton = screen.getByTitle('Pan (or right-click drag)');
+      expect(panButton).toHaveClass('bg-blue-600');
+    });
+
+    it('should render pan tool button', () => {
+      const props = createDefaultProps();
+      render(<TileToolbarContent {...props} />);
+
+      expect(screen.getByTitle('Pan (or right-click drag)')).toBeInTheDocument();
+    });
   });
 
   describe('bright toggle', () => {

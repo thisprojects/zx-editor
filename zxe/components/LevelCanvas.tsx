@@ -75,7 +75,7 @@ export function LevelCanvas({
       e.preventDefault();
       e.stopPropagation();
       const delta = e.deltaY > 0 ? -1 : 1;
-      const newSize = Math.max(1, Math.min(10, pixelSize + delta));
+      const newSize = Math.max(1, pixelSize + delta);
       if (newSize !== pixelSize) {
         onPixelSizeChange(newSize);
       }
@@ -335,9 +335,12 @@ export function LevelCanvas({
         </div>
       </div>
       {/* Info overlay */}
-      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">
-        {pixelSize}x | {gridSize.cols}×{gridSize.rows} tiles | {tileSize}×{tileSize}px
-        {hoverCell && ` | Cell: ${hoverCell.col},${hoverCell.row}`}
+      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none text-right">
+        <div>
+          {pixelSize}x | {gridSize.cols}×{gridSize.rows} tiles | {tileSize}×{tileSize}px
+          {hoverCell && ` | Cell: ${hoverCell.col},${hoverCell.row}`}
+        </div>
+        <div className="text-gray-400">Right-click drag to pan • Scroll to zoom</div>
       </div>
     </div>
   );

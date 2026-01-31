@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { Tool, SoftwareSpriteWidth, SoftwareSpriteHeight, SoftwareSpriteFrame, SoftwareSpriteExportOptions, MaskInterleaving } from '@/types';
 import { BsPencilFill, BsEraserFill, BsPaintBucket, BsPlayFill, BsPauseFill, BsStopFill, BsPlusLg, BsTrash, BsFiles } from 'react-icons/bs';
-import { TbLine } from 'react-icons/tb';
+import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
 import { SOFTWARE_SPRITE_SIZES, MAX_ANIMATION_FRAMES } from '@/constants';
 
@@ -244,6 +244,18 @@ export function PlayerSpriteToolbarContent({
                   title="Bucket Fill (Paper)"
                 >
                   <BsPaintBucket size={16} />
+                </button>
+                <button
+                  onClick={() => onSelectTool('pan')}
+                  disabled={isPlaying}
+                  className={`p-2 rounded ${
+                    currentTool === 'pan'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                  }`}
+                  title="Pan (or right-click drag)"
+                >
+                  <TbHandStop size={16} />
                 </button>
               </div>
             </div>

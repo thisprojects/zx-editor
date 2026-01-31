@@ -104,6 +104,7 @@ export default function TileEditorPage() {
           onSetLineStart={drawing.setLineStart}
           onSetLinePreview={drawing.setLinePreview}
           onBucketFill={drawing.bucketFill}
+          onPixelSizeChange={setPixelSize}
         />
       </div>
 

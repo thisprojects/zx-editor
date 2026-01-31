@@ -57,6 +57,7 @@ describe('Canvas component', () => {
       onBucketFill: jest.fn(),
       onBackgroundMove: jest.fn(),
       onBackgroundScale: jest.fn(),
+      onPixelSizeChange: jest.fn(),
     };
   };
 
@@ -556,6 +557,110 @@ describe('Canvas component', () => {
       // Position: 2 * 10 = 20, 3 * 10 = 30
       // Dimensions: 560 * 1.5 = 840, 240 * 1.5 = 360
       expect(mockDrawImage).toHaveBeenCalledWith(mockImage, 20, 30, 840, 360);
+    });
+  });
+
+  describe('pan tool', () => {
+    it('should show pan message when tool is pan', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<Canvas {...props} />);
+      expect(screen.getByText('Click and drag to pan, scroll to zoom')).toBeInTheDocument();
+    });
+
+    it('should show grab cursor when pan tool is selected', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas');
+      expect(canvas).toHaveClass('cursor-grab');
+    });
+
+    it('should start panning on left click with pan tool', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 0 });
+
+      // Should not trigger drawing actions
+      expect(props.onSetPixel).not.toHaveBeenCalled();
+      expect(props.onSetIsDrawing).not.toHaveBeenCalled();
+    });
+
+    it('should not draw when pan tool is active', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      canvas.getBoundingClientRect = jest.fn(() => ({
+        left: 0,
+        top: 0,
+        right: 560,
+        bottom: 240,
+        width: 560,
+        height: 240,
+        x: 0,
+        y: 0,
+        toJSON: jest.fn(),
+      }));
+
+      fireEvent.mouseDown(canvas, { clientX: 50, clientY: 50, button: 0 });
+      fireEvent.mouseMove(canvas, { clientX: 100, clientY: 100 });
+
+      expect(props.onSetPixel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('right-click pan', () => {
+    it('should start panning on right click', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pencil';
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 2 });
+
+      // Should not trigger drawing actions
+      expect(props.onSetPixel).not.toHaveBeenCalled();
+    });
+
+    it('should prevent context menu on right click', () => {
+      const props = createDefaultProps();
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      const contextMenuEvent = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = jest.spyOn(contextMenuEvent, 'preventDefault');
+
+      canvas.dispatchEvent(contextMenuEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should start panning on middle mouse button', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pencil';
+      render(<Canvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 1 });
+
+      // Should not trigger drawing actions
+      expect(props.onSetPixel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('zoom functionality', () => {
+    it('should display pan/zoom instructions', () => {
+      const props = createDefaultProps();
+      render(<Canvas {...props} />);
+      expect(screen.getByText('Right-click drag to pan • Scroll to zoom')).toBeInTheDocument();
     });
   });
 

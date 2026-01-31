@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { Tool } from '@/types';
 import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
-import { TbLine } from 'react-icons/tb';
+import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
 import { MAX_UDG_CHARS } from '@/constants';
 
@@ -142,6 +142,17 @@ export function SpriteToolbarContent({
                   title="Bucket Fill (Paper)"
                 >
                   <BsPaintBucket size={16} />
+                </button>
+                <button
+                  onClick={() => onSelectTool('pan')}
+                  className={`p-2 rounded ${
+                    currentTool === 'pan'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title="Pan (or right-click drag)"
+                >
+                  <TbHandStop size={16} />
                 </button>
               </div>
             </div>

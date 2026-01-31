@@ -146,7 +146,8 @@ describe('SceneCanvas component', () => {
       const props = createDefaultProps();
       render(<SceneCanvas {...props} />);
 
-      const zoomIndicator = screen.getByText(/3x/).closest('div');
+      const zoomText = screen.getByText(/3x/);
+      const zoomIndicator = zoomText.parentElement;
       expect(zoomIndicator).toHaveClass('pointer-events-none');
     });
 
@@ -154,7 +155,8 @@ describe('SceneCanvas component', () => {
       const props = createDefaultProps();
       render(<SceneCanvas {...props} />);
 
-      const zoomIndicator = screen.getByText(/3x/).closest('div');
+      const zoomText = screen.getByText(/3x/);
+      const zoomIndicator = zoomText.parentElement;
       expect(zoomIndicator).toHaveClass('absolute');
       expect(zoomIndicator).toHaveClass('bottom-2');
       expect(zoomIndicator).toHaveClass('right-2');
@@ -203,18 +205,18 @@ describe('SceneCanvas component', () => {
       expect(props.onPixelSizeChange).not.toHaveBeenCalled();
     });
 
-    it('should not zoom above maximum (10x)', () => {
+    it('should allow infinite zoom (no maximum)', () => {
       const props = createDefaultProps();
       props.pixelSize = 10;
       render(<SceneCanvas {...props} />);
 
       const container = document.querySelector('.overflow-auto');
 
-      // Try to zoom in when already at maximum
+      // Zoom in past previous 10x limit
       fireEvent.wheel(container!, { deltaY: -100 });
 
-      // Should not call onPixelSizeChange since we're already at maximum
-      expect(props.onPixelSizeChange).not.toHaveBeenCalled();
+      // Should call onPixelSizeChange since infinite zoom is now allowed
+      expect(props.onPixelSizeChange).toHaveBeenCalledWith(11);
     });
 
     it('should clamp zoom to valid range', () => {
@@ -581,6 +583,49 @@ describe('SceneCanvas component', () => {
       canvas.dispatchEvent(contextMenuEvent);
 
       expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should start panning on left click with pan tool', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<SceneCanvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      fireEvent.mouseDown(canvas, { button: 0, clientX: 100, clientY: 100 });
+
+      expect(canvas).toHaveClass('cursor-grabbing');
+    });
+
+    it('should show grab cursor when pan tool is selected', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<SceneCanvas {...props} />);
+      const canvas = document.querySelector('canvas');
+
+      expect(canvas).toHaveClass('cursor-grab');
+    });
+
+    it('should not draw when pan tool is active', () => {
+      const props = createDefaultProps();
+      props.currentTool = 'pan';
+      render(<SceneCanvas {...props} />);
+      const canvas = document.querySelector('canvas')!;
+
+      canvas.getBoundingClientRect = jest.fn(() => ({
+        left: 0,
+        top: 0,
+        right: canvasWidth * 3,
+        bottom: canvasHeight * 3,
+        width: canvasWidth * 3,
+        height: canvasHeight * 3,
+        x: 0,
+        y: 0,
+        toJSON: jest.fn(),
+      }));
+
+      fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30, button: 0 });
+
+      expect(props.onSetPixel).not.toHaveBeenCalled();
     });
   });
 

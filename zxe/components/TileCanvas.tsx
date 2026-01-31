@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Tool, Attribute, Point, TileSize } from '@/types';
 import { CHAR_SIZE, TILE_SIZES } from '@/constants';
 import { getColourHex } from '@/utils/colors';
@@ -23,6 +23,7 @@ interface TileCanvasProps {
   onSetLineStart: (point: Point | null) => void;
   onSetLinePreview: (point: Point | null) => void;
   onBucketFill: (x: number, y: number) => void;
+  onPixelSizeChange: (size: number) => void;
 }
 
 export function TileCanvas({
@@ -42,8 +43,15 @@ export function TileCanvas({
   onSetLineStart,
   onSetLinePreview,
   onBucketFill,
+  onPixelSizeChange,
 }: TileCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pan state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   const canvasWidth = charsWidth * CHAR_SIZE;
   const canvasHeight = charsHeight * CHAR_SIZE;
@@ -131,6 +139,27 @@ export function TileCanvas({
     drawCanvas();
   }, [drawCanvas]);
 
+  // Handle mouse wheel for zoom - use native event listener to properly prevent default
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? -1 : 1;
+      const newSize = Math.max(1, pixelSize + delta);
+      if (newSize !== pixelSize) {
+        onPixelSizeChange(newSize);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [pixelSize, onPixelSizeChange]);
+
   // Get pixel coordinates from mouse event
   const getPixelCoords = (e: React.MouseEvent<HTMLCanvasElement>): Point | null => {
     const canvas = canvasRef.current;
@@ -146,6 +175,29 @@ export function TileCanvas({
 
   // Handle mouse events
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Middle mouse button for panning
+    if (e.button === 1) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
+    // Right click for panning
+    if (e.button === 2) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
+    // Pan tool with left click
+    if (currentTool === 'pan' && e.button === 0) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -170,6 +222,15 @@ export function TileCanvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle panning
+    if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+      return;
+    }
+
     const coords = getPixelCoords(e);
     if (!coords) return;
 
@@ -183,16 +244,30 @@ export function TileCanvas({
   };
 
   const handleMouseUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
     onSetIsDrawing(false);
   };
 
   const handleMouseLeave = () => {
+    if (isPanning) {
+      setIsPanning(false);
+    }
     onSetIsDrawing(false);
+  };
+
+  // Prevent context menu on right click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
   };
 
   // Get status message
   const getStatusMessage = () => {
-    if (currentTool === 'line' && lineStart) {
+    if (currentTool === 'pan') {
+      return 'Click and drag to pan, scroll to zoom';
+    } else if (currentTool === 'line' && lineStart) {
       return 'Click to set line end point';
     } else if (currentTool === 'line') {
       return 'Click to set line start point';
@@ -200,8 +275,17 @@ export function TileCanvas({
       return 'Click and drag to draw';
     } else if (currentTool === 'bucket') {
       return 'Click to fill cell paper colour';
+    } else if (currentTool === 'rubber') {
+      return 'Click and drag to erase';
     }
-    return 'Click and drag to erase';
+    return 'Right-click to pan, scroll to zoom';
+  };
+
+  // Get cursor class
+  const getCursorClass = () => {
+    if (isPanning) return 'cursor-grabbing';
+    if (currentTool === 'pan') return 'cursor-grab';
+    return 'cursor-crosshair';
   };
 
   // Get tile info string
@@ -214,23 +298,32 @@ export function TileCanvas({
   return (
     <div className="p-4 h-screen flex flex-col">
       {/* Canvas */}
-      <div className="flex-1 bg-gray-800 rounded-lg p-4 overflow-auto flex items-center justify-center">
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth * pixelSize}
-          height={canvasHeight * pixelSize}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          className="cursor-crosshair border border-gray-600"
-        />
-      </div>
-
-      {/* Info */}
-      <div className="mt-2 text-sm text-gray-400 text-center">
-        <p>{getStatusMessage()}</p>
-        <p className="text-xs mt-1">{getTileInfo()}</p>
+      <div ref={containerRef} className="flex-1 bg-gray-800 rounded-lg p-4 overflow-auto flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div
+            style={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth * pixelSize}
+              height={canvasHeight * pixelSize}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onContextMenu={handleContextMenu}
+              className={`border border-gray-600 ${getCursorClass()}`}
+            />
+          </div>
+          {/* Info - right below canvas */}
+          <div className="mt-2 text-sm text-gray-400 text-center">
+            <p>{getStatusMessage()}</p>
+            <p className="text-xs mt-1">{getTileInfo()}</p>
+            <p className="text-xs text-gray-500 mt-1">Right-click drag to pan • Scroll to zoom</p>
+          </div>
+        </div>
       </div>
     </div>
   );

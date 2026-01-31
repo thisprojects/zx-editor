@@ -168,6 +168,7 @@ export default function PlayerSpriteEditorPage() {
             drawing.setBackgroundY(y);
           }}
           onBackgroundScale={drawing.setBackgroundScale}
+          onPixelSizeChange={setPixelSize}
         />
       </div>
 

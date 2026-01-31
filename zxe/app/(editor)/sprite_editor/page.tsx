@@ -128,6 +128,7 @@ export default function SpriteEditorPage() {
             drawing.setBackgroundY(y);
           }}
           onBackgroundScale={drawing.setBackgroundScale}
+          onPixelSizeChange={setPixelSize}
         />
       </div>
 
