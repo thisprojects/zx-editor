@@ -54,6 +54,8 @@ export default function SpriteEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Sprite Editor"
+        infoId="sprite-editor-info"
+        infoDescription="Create sprites for the ZX Spectrum. Each 8x8 character cell can have 1 ink and 1 paper colour. Bright mode makes colours more vivid. Maximum canvas size is 21 characters total."
       >
         <SpriteToolbarContent
           currentTool={drawing.currentTool}

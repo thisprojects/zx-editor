@@ -5,6 +5,7 @@ import { Tool } from '@/types';
 import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
+import { InfoTooltip } from './InfoTooltip';
 import { MAX_UDG_CHARS } from '@/constants';
 
 interface SpriteToolbarContentProps {
@@ -99,61 +100,96 @@ export function SpriteToolbarContent({
             <div className="border border-gray-600 rounded p-2">
               <div className="text-xs text-gray-400 mb-1">Tools</div>
               <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => onSelectTool('pencil')}
-                  className={`p-2 rounded ${
-                    currentTool === 'pencil'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Pencil"
-                >
-                  <BsPencilFill size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('line')}
-                  className={`p-2 rounded ${
-                    currentTool === 'line'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Line"
-                >
-                  <TbLine size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('rubber')}
-                  className={`p-2 rounded ${
-                    currentTool === 'rubber'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Rubber"
-                >
-                  <BsEraserFill size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('bucket')}
-                  className={`p-2 rounded ${
-                    currentTool === 'bucket'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Bucket Fill (Paper)"
-                >
-                  <BsPaintBucket size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('pan')}
-                  className={`p-2 rounded ${
-                    currentTool === 'pan'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Pan (or right-click drag)"
-                >
-                  <TbHandStop size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('pencil')}
+                    className={`p-2 rounded ${
+                      currentTool === 'pencil'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title="Pencil"
+                  >
+                    <BsPencilFill size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="sprite-pencil"
+                    title="Pencil"
+                    description="Draw individual pixels. Click and drag to draw freehand lines in the selected colour."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('line')}
+                    className={`p-2 rounded ${
+                      currentTool === 'line'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title="Line"
+                  >
+                    <TbLine size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="sprite-line"
+                    title="Line"
+                    description="Draw straight lines. Click to set the start point, then click again to set the end point."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('rubber')}
+                    className={`p-2 rounded ${
+                      currentTool === 'rubber'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title="Rubber"
+                  >
+                    <BsEraserFill size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="sprite-rubber"
+                    title="Rubber"
+                    description="Erase pixels. Click and drag to remove ink pixels, leaving the paper colour visible."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('bucket')}
+                    className={`p-2 rounded ${
+                      currentTool === 'bucket'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title="Bucket Fill (Paper)"
+                  >
+                    <BsPaintBucket size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="sprite-bucket"
+                    title="Bucket Fill"
+                    description="Fill an area with the selected colour. Fills connected pixels of the same colour."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('pan')}
+                    className={`p-2 rounded ${
+                      currentTool === 'pan'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title="Pan (or right-click drag)"
+                  >
+                    <TbHandStop size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="sprite-pan"
+                    title="Pan"
+                    description="Navigate the canvas. Click and drag to pan around. You can also right-click drag with any tool."
+                  />
+                </div>
               </div>
             </div>
 
@@ -161,7 +197,14 @@ export function SpriteToolbarContent({
             <div className="border border-gray-600 rounded p-2 flex flex-col">
               {/* BRIGHT toggle */}
               <div className="flex-1">
-                <div className="text-xs text-gray-400 mb-1">Bright</div>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs text-gray-400">Bright</span>
+                  <InfoTooltip
+                    id="sprite-bright"
+                    title="Bright"
+                    description="Toggle bright mode. When enabled, colours appear brighter and more vivid."
+                  />
+                </div>
                 <button
                   onClick={() => onBrightChange(!currentBright)}
                   className={`w-10 h-5 rounded-full relative transition-colors ${
@@ -212,7 +255,14 @@ export function SpriteToolbarContent({
 
           {/* Scale Control - matches width of columns above */}
           <div className="border border-gray-600 rounded p-2 mt-2">
-            <div className="text-xs text-gray-400 mb-1">Scale</div>
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs text-gray-400">Scale</span>
+              <InfoTooltip
+                id="sprite-scale"
+                title="Scale"
+                description="Adjust the zoom level of the canvas. Higher values make pixels larger and easier to edit."
+              />
+            </div>
             <input
               type="range"
               min={2}
@@ -228,7 +278,14 @@ export function SpriteToolbarContent({
 
       {/* Trace Image */}
       <div className="border border-gray-600 rounded p-2">
-        <div className="text-xs text-gray-400 mb-1">Trace Image</div>
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-xs text-gray-400">Trace Image</span>
+          <InfoTooltip
+            id="sprite-trace-image"
+            title="Trace Image"
+            description="Load a reference image to trace over. Useful for converting existing artwork to pixel art. Adjust opacity and scale, or enable Adjust mode to drag and resize the image."
+          />
+        </div>
         <input
           ref={backgroundInputRef}
           type="file"

@@ -53,6 +53,8 @@ export default function TileEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Tile Editor"
+        infoId="tile-editor-info"
+        infoDescription="Create reusable tiles for the ZX Spectrum. Tiles can be 8x8 (1 char), 16x16 (4 chars), or 24x24 (9 chars). Each 8x8 character cell has 1 ink and 1 paper colour. Use tiles in the Level Editor to build game screens."
       >
         <TileToolbarContent
           tileSize={drawing.tileSize}

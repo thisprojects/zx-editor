@@ -1,11 +1,14 @@
 'use client';
 
 import { IoClose, IoMenu } from 'react-icons/io5';
+import { InfoTooltip } from './InfoTooltip';
 
 interface EditorToolbarProps {
   isOpen: boolean;
   onToggle: () => void;
   title?: string;
+  infoId?: string;
+  infoDescription?: string;
   children?: React.ReactNode;
 }
 
@@ -13,6 +16,8 @@ export function EditorToolbar({
   isOpen,
   onToggle,
   title = 'ZX Editor',
+  infoId,
+  infoDescription,
   children,
 }: EditorToolbarProps) {
   return (
@@ -36,7 +41,16 @@ export function EditorToolbar({
       >
         {/* Toolbar Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h1 className="text-lg font-bold">{title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold">{title}</h1>
+            {infoId && infoDescription && (
+              <InfoTooltip
+                id={infoId}
+                title={title}
+                description={infoDescription}
+              />
+            )}
+          </div>
           <button
             onClick={onToggle}
             className="p-1 hover:bg-gray-700 rounded"

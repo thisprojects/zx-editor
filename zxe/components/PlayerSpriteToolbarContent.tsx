@@ -5,6 +5,7 @@ import { Tool, SoftwareSpriteWidth, SoftwareSpriteHeight, SoftwareSpriteFrame, S
 import { BsPencilFill, BsEraserFill, BsPaintBucket, BsPlayFill, BsPauseFill, BsStopFill, BsPlusLg, BsTrash, BsFiles } from 'react-icons/bs';
 import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
+import { InfoTooltip } from './InfoTooltip';
 import { SOFTWARE_SPRITE_SIZES, MAX_ANIMATION_FRAMES } from '@/constants';
 
 interface PlayerSpriteToolbarContentProps {
@@ -197,73 +198,115 @@ export function PlayerSpriteToolbarContent({
             <div className="border border-gray-600 rounded p-2">
               <div className="text-xs text-gray-400 mb-1">Tools</div>
               <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => onSelectTool('pencil')}
-                  disabled={isPlaying}
-                  className={`p-2 rounded ${
-                    currentTool === 'pencil'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
-                  }`}
-                  title="Pencil"
-                >
-                  <BsPencilFill size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('line')}
-                  disabled={isPlaying}
-                  className={`p-2 rounded ${
-                    currentTool === 'line'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
-                  }`}
-                  title="Line"
-                >
-                  <TbLine size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('rubber')}
-                  disabled={isPlaying}
-                  className={`p-2 rounded ${
-                    currentTool === 'rubber'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
-                  }`}
-                  title="Rubber"
-                >
-                  <BsEraserFill size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('bucket')}
-                  disabled={isPlaying}
-                  className={`p-2 rounded ${
-                    currentTool === 'bucket'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
-                  }`}
-                  title="Bucket Fill (Paper)"
-                >
-                  <BsPaintBucket size={16} />
-                </button>
-                <button
-                  onClick={() => onSelectTool('pan')}
-                  disabled={isPlaying}
-                  className={`p-2 rounded ${
-                    currentTool === 'pan'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
-                  }`}
-                  title="Pan (or right-click drag)"
-                >
-                  <TbHandStop size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('pencil')}
+                    disabled={isPlaying}
+                    className={`p-2 rounded ${
+                      currentTool === 'pencil'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                    }`}
+                    title="Pencil"
+                  >
+                    <BsPencilFill size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="player-pencil"
+                    title="Pencil"
+                    description="Draw individual pixels. Click and drag to draw freehand lines in the selected colour."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('line')}
+                    disabled={isPlaying}
+                    className={`p-2 rounded ${
+                      currentTool === 'line'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                    }`}
+                    title="Line"
+                  >
+                    <TbLine size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="player-line"
+                    title="Line"
+                    description="Draw straight lines. Click to set the start point, then click again to set the end point."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('rubber')}
+                    disabled={isPlaying}
+                    className={`p-2 rounded ${
+                      currentTool === 'rubber'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                    }`}
+                    title="Rubber"
+                  >
+                    <BsEraserFill size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="player-rubber"
+                    title="Rubber"
+                    description="Erase pixels. Click and drag to remove ink pixels, leaving the paper colour visible."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('bucket')}
+                    disabled={isPlaying}
+                    className={`p-2 rounded ${
+                      currentTool === 'bucket'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                    }`}
+                    title="Bucket Fill (Paper)"
+                  >
+                    <BsPaintBucket size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="player-bucket"
+                    title="Bucket Fill"
+                    description="Fill an area with the selected colour. Fills connected pixels of the same colour."
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onSelectTool('pan')}
+                    disabled={isPlaying}
+                    className={`p-2 rounded ${
+                      currentTool === 'pan'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50'
+                    }`}
+                    title="Pan (or right-click drag)"
+                  >
+                    <TbHandStop size={16} />
+                  </button>
+                  <InfoTooltip
+                    id="player-pan"
+                    title="Pan"
+                    description="Navigate the canvas. Click and drag to pan around. You can also right-click drag with any tool."
+                  />
+                </div>
               </div>
             </div>
 
             {/* Settings column */}
             <div className="border border-gray-600 rounded p-2 flex flex-col">
               <div>
-                <div className="text-xs text-gray-400 mb-1">Bright</div>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs text-gray-400">Bright</span>
+                  <InfoTooltip
+                    id="player-bright"
+                    title="Bright"
+                    description="Toggle bright mode. When enabled, colours appear brighter and more vivid."
+                  />
+                </div>
                 <button
                   onClick={() => onBrightChange(!currentBright)}
                   className={`w-10 h-5 rounded-full relative transition-colors ${
@@ -283,7 +326,14 @@ export function PlayerSpriteToolbarContent({
 
           {/* Scale Control */}
           <div className="border border-gray-600 rounded p-2 mt-2">
-            <div className="text-xs text-gray-400 mb-1">Scale</div>
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs text-gray-400">Scale</span>
+              <InfoTooltip
+                id="player-scale"
+                title="Scale"
+                description="Adjust the zoom level of the canvas. Higher values make pixels larger and easier to edit."
+              />
+            </div>
             <input
               type="range"
               min={5}
@@ -299,8 +349,15 @@ export function PlayerSpriteToolbarContent({
 
       {/* Frame Management */}
       <div className="border border-gray-600 rounded p-2 mb-2">
-        <div className="text-xs text-gray-400 mb-1">
-          Frames ({frames.length}/{MAX_ANIMATION_FRAMES})
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-xs text-gray-400">
+            Frames ({frames.length}/{MAX_ANIMATION_FRAMES})
+          </span>
+          <InfoTooltip
+            id="player-frames"
+            title="Frames"
+            description="Animation frames for your sprite. Add multiple frames to create animations. Use duplicate to copy the current frame as a starting point. Maximum 32 frames per sprite."
+          />
         </div>
 
         {/* Frame list */}
@@ -359,7 +416,14 @@ export function PlayerSpriteToolbarContent({
 
       {/* Animation Controls */}
       <div className="border border-gray-600 rounded p-2 mb-2">
-        <div className="text-xs text-gray-400 mb-1">Animation</div>
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-xs text-gray-400">Animation</span>
+          <InfoTooltip
+            id="player-animation"
+            title="Animation"
+            description="Preview your animation. Set FPS (frames per second) to control speed. Loop mode repeats the animation continuously. Requires at least 2 frames to play."
+          />
+        </div>
 
         {/* Playback controls */}
         <div className="flex gap-1 mb-2">
@@ -419,7 +483,14 @@ export function PlayerSpriteToolbarContent({
       {/* Onion Skinning */}
       <div className="border border-gray-600 rounded p-2 mb-2">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-400">Onion Skin</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-400">Onion Skin</span>
+            <InfoTooltip
+              id="player-onion-skin"
+              title="Onion Skin"
+              description="Shows a faded overlay of the previous frame while editing. Helps you align frames for smooth animation. Adjust opacity to make it more or less visible."
+            />
+          </div>
           <button
             onClick={() => onOnionSkinChange(!onionSkinEnabled)}
             disabled={isPlaying}
@@ -453,7 +524,14 @@ export function PlayerSpriteToolbarContent({
 
       {/* Trace Image */}
       <div className="border border-gray-600 rounded p-2 mb-2">
-        <div className="text-xs text-gray-400 mb-1">Trace Image</div>
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-xs text-gray-400">Trace Image</span>
+          <InfoTooltip
+            id="player-trace-image"
+            title="Trace Image"
+            description="Load a reference image to trace over. Useful for converting existing artwork to pixel art. Adjust opacity and scale, or enable Adjust mode to drag and resize the image."
+          />
+        </div>
         <input
           ref={backgroundInputRef}
           type="file"
@@ -546,72 +624,114 @@ export function PlayerSpriteToolbarContent({
 
       {/* Export Options */}
       <div className="border border-gray-600 rounded p-2 mb-2">
-        <div className="text-xs text-gray-400 mb-1">Export Options</div>
-
-        <label className="flex items-center gap-2 text-xs text-gray-300 mb-1 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={exportOptions.includeMask}
-            onChange={(e) =>
-              onExportOptionsChange({ ...exportOptions, includeMask: e.target.checked })
-            }
-            className="accent-blue-500"
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-xs text-gray-400">Export Options</span>
+          <InfoTooltip
+            id="player-export-options"
+            title="Export Options"
+            description="Configure how sprite data is exported to assembly. These options affect memory layout and performance of your sprite routines."
           />
-          Include Mask
-        </label>
+        </div>
+
+        <div className="flex items-center gap-1 mb-1">
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={exportOptions.includeMask}
+              onChange={(e) =>
+                onExportOptionsChange({ ...exportOptions, includeMask: e.target.checked })
+              }
+              className="accent-blue-500"
+            />
+            Include Mask
+          </label>
+          <InfoTooltip
+            id="player-export-mask"
+            title="Include Mask"
+            description="Generates a mask for transparency. The mask defines which pixels are transparent (0) or opaque (1). Required for sprites that overlay backgrounds without erasing them."
+          />
+        </div>
 
         {exportOptions.includeMask && (
           <div className="ml-4 mb-1">
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-              <input
-                type="radio"
-                name="interleaving"
-                checked={exportOptions.interleaving === 'sprite-mask'}
-                onChange={() =>
-                  onExportOptionsChange({ ...exportOptions, interleaving: 'sprite-mask' })
-                }
-                className="accent-blue-500"
+            <div className="flex items-center gap-1">
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                <input
+                  type="radio"
+                  name="interleaving"
+                  checked={exportOptions.interleaving === 'sprite-mask'}
+                  onChange={() =>
+                    onExportOptionsChange({ ...exportOptions, interleaving: 'sprite-mask' })
+                  }
+                  className="accent-blue-500"
+                />
+                Interleaved
+              </label>
+              <InfoTooltip
+                id="player-export-interleaved"
+                title="Interleaved"
+                description="Alternates sprite byte, mask byte for each row. Faster to draw as data is sequential in memory. Recommended for most sprite routines."
               />
-              Interleaved
-            </label>
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-              <input
-                type="radio"
-                name="interleaving"
-                checked={exportOptions.interleaving === 'separate-blocks'}
-                onChange={() =>
-                  onExportOptionsChange({ ...exportOptions, interleaving: 'separate-blocks' })
-                }
-                className="accent-blue-500"
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                <input
+                  type="radio"
+                  name="interleaving"
+                  checked={exportOptions.interleaving === 'separate-blocks'}
+                  onChange={() =>
+                    onExportOptionsChange({ ...exportOptions, interleaving: 'separate-blocks' })
+                  }
+                  className="accent-blue-500"
+                />
+                Separate
+              </label>
+              <InfoTooltip
+                id="player-export-separate"
+                title="Separate"
+                description="All sprite bytes first, then all mask bytes. Useful for routines that process sprite and mask data independently."
               />
-              Separate
-            </label>
+            </div>
           </div>
         )}
 
-        <label className="flex items-center gap-2 text-xs text-gray-300 mb-1 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={exportOptions.includePreShifts}
-            onChange={(e) =>
-              onExportOptionsChange({ ...exportOptions, includePreShifts: e.target.checked })
-            }
-            className="accent-blue-500"
+        <div className="flex items-center gap-1 mb-1">
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={exportOptions.includePreShifts}
+              onChange={(e) =>
+                onExportOptionsChange({ ...exportOptions, includePreShifts: e.target.checked })
+              }
+              className="accent-blue-500"
+            />
+            Pre-shifts (0-7px)
+          </label>
+          <InfoTooltip
+            id="player-export-preshifts"
+            title="Pre-shifts"
+            description="Generates 8 versions of the sprite, each shifted 0-7 pixels right. Enables smooth pixel-level horizontal movement without runtime shifting. Uses 8x more memory but much faster."
           />
-          Pre-shifts (0-7px)
-        </label>
+        </div>
 
-        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={exportOptions.generateLookupTable}
-            onChange={(e) =>
-              onExportOptionsChange({ ...exportOptions, generateLookupTable: e.target.checked })
-            }
-            className="accent-blue-500"
+        <div className="flex items-center gap-1">
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={exportOptions.generateLookupTable}
+              onChange={(e) =>
+                onExportOptionsChange({ ...exportOptions, generateLookupTable: e.target.checked })
+              }
+              className="accent-blue-500"
+            />
+            Lookup Table
+          </label>
+          <InfoTooltip
+            id="player-export-lookup"
+            title="Lookup Table"
+            description="Generates a table of addresses for each frame and pre-shift. Allows quick indexed access to any sprite variation without calculating offsets at runtime."
           />
-          Lookup Table
-        </label>
+        </div>
       </div>
 
       {/* File operations */}

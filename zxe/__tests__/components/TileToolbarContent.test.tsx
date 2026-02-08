@@ -1,5 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TileToolbarContent } from '@/components/TileToolbarContent';
+import { InfoTooltipProvider } from '@/components/InfoTooltip';
+
+// Helper to render with InfoTooltipProvider
+const renderWithProvider = (ui: React.ReactElement) => {
+  return render(
+    <InfoTooltipProvider>
+      {ui}
+    </InfoTooltipProvider>
+  );
+};
 
 describe('TileToolbarContent', () => {
   const createDefaultProps = () => ({
@@ -26,7 +36,7 @@ describe('TileToolbarContent', () => {
   describe('tile size selector', () => {
     it('should render all three tile size buttons', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('8×8')).toBeInTheDocument();
       expect(screen.getByText('16×16')).toBeInTheDocument();
@@ -36,7 +46,7 @@ describe('TileToolbarContent', () => {
     it('should highlight the currently selected tile size', () => {
       const props = createDefaultProps();
       props.tileSize = 16;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const button16 = screen.getByText('16×16');
       expect(button16).toHaveClass('bg-blue-600');
@@ -47,7 +57,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onTileSizeChange when clicking 16x16', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('16×16'));
 
@@ -56,7 +66,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onTileSizeChange when clicking 24x24', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('24×24'));
 
@@ -66,7 +76,7 @@ describe('TileToolbarContent', () => {
     it('should show character count for 8x8 tile', () => {
       const props = createDefaultProps();
       props.tileSize = 8;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('1 char')).toBeInTheDocument();
     });
@@ -74,7 +84,7 @@ describe('TileToolbarContent', () => {
     it('should show character count for 16x16 tile', () => {
       const props = createDefaultProps();
       props.tileSize = 16;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('4 chars (2×2)')).toBeInTheDocument();
     });
@@ -82,7 +92,7 @@ describe('TileToolbarContent', () => {
     it('should show character count for 24x24 tile', () => {
       const props = createDefaultProps();
       props.tileSize = 24;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('9 chars (3×3)')).toBeInTheDocument();
     });
@@ -91,7 +101,7 @@ describe('TileToolbarContent', () => {
   describe('tool selection', () => {
     it('should call onSelectTool when pencil clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const pencilButton = screen.getByTitle('Pencil');
       fireEvent.click(pencilButton);
@@ -101,7 +111,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onSelectTool when line clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const lineButton = screen.getByTitle('Line');
       fireEvent.click(lineButton);
@@ -111,7 +121,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onSelectTool when rubber clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const rubberButton = screen.getByTitle('Rubber');
       fireEvent.click(rubberButton);
@@ -121,7 +131,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onSelectTool when bucket clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const bucketButton = screen.getByTitle('Bucket Fill (Paper)');
       fireEvent.click(bucketButton);
@@ -132,7 +142,7 @@ describe('TileToolbarContent', () => {
     it('should highlight active tool', () => {
       const props = createDefaultProps();
       props.currentTool = 'rubber';
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const rubberButton = screen.getByTitle('Rubber');
       expect(rubberButton).toHaveClass('bg-blue-600');
@@ -140,7 +150,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onSelectTool when pan clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const panButton = screen.getByTitle('Pan (or right-click drag)');
       fireEvent.click(panButton);
@@ -151,7 +161,7 @@ describe('TileToolbarContent', () => {
     it('should highlight pan tool when selected', () => {
       const props = createDefaultProps();
       props.currentTool = 'pan';
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const panButton = screen.getByTitle('Pan (or right-click drag)');
       expect(panButton).toHaveClass('bg-blue-600');
@@ -159,7 +169,7 @@ describe('TileToolbarContent', () => {
 
     it('should render pan tool button', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByTitle('Pan (or right-click drag)')).toBeInTheDocument();
     });
@@ -168,7 +178,7 @@ describe('TileToolbarContent', () => {
   describe('bright toggle', () => {
     it('should call onBrightChange when toggle clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const toggle = screen.getByTitle('Toggle bright');
       fireEvent.click(toggle);
@@ -179,7 +189,7 @@ describe('TileToolbarContent', () => {
     it('should show yellow background when bright is true', () => {
       const props = createDefaultProps();
       props.currentBright = true;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const toggle = screen.getByTitle('Toggle bright');
       expect(toggle).toHaveClass('bg-yellow-500');
@@ -188,7 +198,7 @@ describe('TileToolbarContent', () => {
     it('should show gray background when bright is false', () => {
       const props = createDefaultProps();
       props.currentBright = false;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const toggle = screen.getByTitle('Toggle bright');
       expect(toggle).toHaveClass('bg-gray-600');
@@ -198,7 +208,7 @@ describe('TileToolbarContent', () => {
   describe('scale slider', () => {
     it('should call onPixelSizeChange when slider changed', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       const slider = screen.getByRole('slider');
       fireEvent.change(slider, { target: { value: '20' } });
@@ -209,7 +219,7 @@ describe('TileToolbarContent', () => {
     it('should display current scale value', () => {
       const props = createDefaultProps();
       props.pixelSize = 15;
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('15x')).toBeInTheDocument();
     });
@@ -218,7 +228,7 @@ describe('TileToolbarContent', () => {
   describe('file operations', () => {
     it('should call onLoad when Load clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('Load'));
 
@@ -227,7 +237,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onSave when Save clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -236,7 +246,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onExport when Export clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('Export'));
 
@@ -245,7 +255,7 @@ describe('TileToolbarContent', () => {
 
     it('should call onClear when Clear clicked', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       fireEvent.click(screen.getByText('Clear'));
 
@@ -256,9 +266,49 @@ describe('TileToolbarContent', () => {
   describe('color picker', () => {
     it('should render color picker', () => {
       const props = createDefaultProps();
-      render(<TileToolbarContent {...props} />);
+      renderWithProvider(<TileToolbarContent {...props} />);
 
       expect(screen.getByText('Colour')).toBeInTheDocument();
+    });
+  });
+
+  describe('info tooltips', () => {
+    it('should render info icons for tools', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+
+      const infoButtons = screen.getAllByTitle('More info');
+      expect(infoButtons.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('should show pencil tool info when clicked', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+
+      const infoButton = screen.getByRole('button', { name: /info about pencil/i });
+      fireEvent.click(infoButton);
+
+      expect(screen.getByText(/draw individual pixels/i)).toBeInTheDocument();
+    });
+
+    it('should show bright info when clicked', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+
+      const infoButton = screen.getByRole('button', { name: /info about bright/i });
+      fireEvent.click(infoButton);
+
+      expect(screen.getByText(/toggle bright mode/i)).toBeInTheDocument();
+    });
+
+    it('should show scale info when clicked', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+
+      const infoButton = screen.getByRole('button', { name: /info about scale/i });
+      fireEvent.click(infoButton);
+
+      expect(screen.getByText(/adjust the zoom level/i)).toBeInTheDocument();
     });
   });
 });

@@ -56,6 +56,8 @@ export default function PlayerSpriteEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Player Sprite"
+        infoId="player-sprite-editor-info"
+        infoDescription="Create animated software sprites. Sizes: 8x8, 16x16, 16x24, or 24x24 pixels. Monochrome only (ink colour set at runtime). Supports multiple animation frames, masks for transparency, and pre-shifted versions for smooth pixel movement."
       >
         <PlayerSpriteToolbarContent
           // Sprite size

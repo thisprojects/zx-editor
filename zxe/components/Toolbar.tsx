@@ -5,6 +5,7 @@ import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine } from 'react-icons/tb';
 import { IoClose, IoMenu } from 'react-icons/io5';
 import { ColorPicker } from './ColorPicker';
+import { InfoTooltip } from './InfoTooltip';
 import { ZX_COLOURS, MAX_UDG_CHARS } from '@/constants';
 import { getColourHex } from '@/utils/colors';
 
@@ -68,7 +69,14 @@ export function Toolbar({
       >
         {/* Toolbar Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h1 className="text-lg font-bold">ZX UDG Editor</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold">ZX UDG Editor</h1>
+            <InfoTooltip
+              id="udg-editor-info"
+              title="UDG Editor"
+              description="Create User Defined Graphics for the ZX Spectrum. Each 8x8 pixel character uses 1 ink colour and 1 paper colour per character cell. Bright mode makes colours more vivid. Maximum canvas size is 21 characters."
+            />
+          </div>
           <button
             onClick={onToggle}
             className="p-1 hover:bg-gray-700 rounded"
@@ -99,50 +107,78 @@ export function Toolbar({
                 <div className="border border-gray-600 rounded p-2">
                   <div className="text-xs text-gray-400 mb-1">Tools</div>
                   <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => onSelectTool('pencil')}
-                      className={`p-2 rounded ${
-                        currentTool === 'pencil'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                      title="Pencil"
-                    >
-                      <BsPencilFill size={16} />
-                    </button>
-                    <button
-                      onClick={() => onSelectTool('line')}
-                      className={`p-2 rounded ${
-                        currentTool === 'line'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                      title="Line"
-                    >
-                      <TbLine size={16} />
-                    </button>
-                    <button
-                      onClick={() => onSelectTool('rubber')}
-                      className={`p-2 rounded ${
-                        currentTool === 'rubber'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                      title="Rubber"
-                    >
-                      <BsEraserFill size={16} />
-                    </button>
-                    <button
-                      onClick={() => onSelectTool('bucket')}
-                      className={`p-2 rounded ${
-                        currentTool === 'bucket'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                      title="Bucket Fill (Paper)"
-                    >
-                      <BsPaintBucket size={16} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onSelectTool('pencil')}
+                        className={`p-2 rounded ${
+                          currentTool === 'pencil'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                        title="Pencil"
+                      >
+                        <BsPencilFill size={16} />
+                      </button>
+                      <InfoTooltip
+                        id="udg-pencil"
+                        title="Pencil"
+                        description="Draw individual pixels. Click and drag to draw freehand lines in the selected colour."
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onSelectTool('line')}
+                        className={`p-2 rounded ${
+                          currentTool === 'line'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                        title="Line"
+                      >
+                        <TbLine size={16} />
+                      </button>
+                      <InfoTooltip
+                        id="udg-line"
+                        title="Line"
+                        description="Draw straight lines. Click to set the start point, then click again to set the end point."
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onSelectTool('rubber')}
+                        className={`p-2 rounded ${
+                          currentTool === 'rubber'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                        title="Rubber"
+                      >
+                        <BsEraserFill size={16} />
+                      </button>
+                      <InfoTooltip
+                        id="udg-rubber"
+                        title="Rubber"
+                        description="Erase pixels. Click and drag to remove ink pixels, leaving the paper colour visible."
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onSelectTool('bucket')}
+                        className={`p-2 rounded ${
+                          currentTool === 'bucket'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                        title="Bucket Fill (Paper)"
+                      >
+                        <BsPaintBucket size={16} />
+                      </button>
+                      <InfoTooltip
+                        id="udg-bucket"
+                        title="Bucket Fill"
+                        description="Fill an area with the selected colour. Fills connected pixels of the same colour."
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -150,7 +186,14 @@ export function Toolbar({
                 <div className="border border-gray-600 rounded p-2 flex flex-col">
                   {/* BRIGHT toggle */}
                   <div className="flex-1">
-                    <div className="text-xs text-gray-400 mb-1">Bright</div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-xs text-gray-400">Bright</span>
+                      <InfoTooltip
+                        id="udg-bright"
+                        title="Bright"
+                        description="Toggle bright mode. When enabled, colours appear brighter and more vivid."
+                      />
+                    </div>
                     <button
                       onClick={() => onBrightChange(!currentBright)}
                       className={`w-10 h-5 rounded-full relative transition-colors ${
@@ -201,7 +244,14 @@ export function Toolbar({
 
               {/* Scale Control - matches width of columns above */}
               <div className="border border-gray-600 rounded p-2 mt-2">
-                <div className="text-xs text-gray-400 mb-1">Scale</div>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs text-gray-400">Scale</span>
+                  <InfoTooltip
+                    id="udg-scale"
+                    title="Scale"
+                    description="Adjust the zoom level of the canvas. Higher values make pixels larger and easier to edit."
+                  />
+                </div>
                 <input
                   type="range"
                   min={2}

@@ -1,5 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SpriteToolbarContent } from '@/components/SpriteToolbarContent';
+import { InfoTooltipProvider } from '@/components/InfoTooltip';
+
+// Helper to render with InfoTooltipProvider
+const renderWithProvider = (ui: React.ReactElement) => {
+  return render(
+    <InfoTooltipProvider>
+      {ui}
+    </InfoTooltipProvider>
+  );
+};
 
 describe('SpriteToolbarContent', () => {
   const defaultProps = {
@@ -37,17 +47,17 @@ describe('SpriteToolbarContent', () => {
 
   describe('rendering', () => {
     it('should render color picker', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('Colour')).toBeInTheDocument();
     });
 
     it('should render tools section', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('Tools')).toBeInTheDocument();
     });
 
     it('should render all tool buttons', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByTitle('Pencil')).toBeInTheDocument();
       expect(screen.getByTitle('Line')).toBeInTheDocument();
       expect(screen.getByTitle('Rubber')).toBeInTheDocument();
@@ -56,26 +66,26 @@ describe('SpriteToolbarContent', () => {
     });
 
     it('should render bright toggle', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('Bright')).toBeInTheDocument();
       expect(screen.getByTitle('Toggle bright')).toBeInTheDocument();
     });
 
     it('should render size inputs', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('Size')).toBeInTheDocument();
       const inputs = screen.getAllByRole('spinbutton');
       expect(inputs).toHaveLength(2);
     });
 
     it('should render scale slider', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('Scale')).toBeInTheDocument();
       expect(screen.getByRole('slider')).toBeInTheDocument();
     });
 
     it('should render file operations', () => {
-      render(<SpriteToolbarContent {...defaultProps} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
       expect(screen.getByText('File')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
@@ -86,13 +96,13 @@ describe('SpriteToolbarContent', () => {
 
   describe('tool selection', () => {
     it('should highlight current tool', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentTool="pencil" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentTool="pencil" />);
       expect(screen.getByTitle('Pencil')).toHaveClass('bg-blue-600');
     });
 
     it('should call onSelectTool when pencil is clicked', () => {
       const onSelectTool = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} currentTool="line" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} currentTool="line" />);
 
       fireEvent.click(screen.getByTitle('Pencil'));
       expect(onSelectTool).toHaveBeenCalledWith('pencil');
@@ -100,7 +110,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onSelectTool when line is clicked', () => {
       const onSelectTool = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
 
       fireEvent.click(screen.getByTitle('Line'));
       expect(onSelectTool).toHaveBeenCalledWith('line');
@@ -108,7 +118,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onSelectTool when rubber is clicked', () => {
       const onSelectTool = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
 
       fireEvent.click(screen.getByTitle('Rubber'));
       expect(onSelectTool).toHaveBeenCalledWith('rubber');
@@ -116,38 +126,38 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onSelectTool when bucket is clicked', () => {
       const onSelectTool = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
 
       fireEvent.click(screen.getByTitle('Bucket Fill (Paper)'));
       expect(onSelectTool).toHaveBeenCalledWith('bucket');
     });
 
     it('should highlight line tool when selected', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentTool="line" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentTool="line" />);
       expect(screen.getByTitle('Line')).toHaveClass('bg-blue-600');
       expect(screen.getByTitle('Pencil')).not.toHaveClass('bg-blue-600');
     });
 
     it('should highlight rubber tool when selected', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentTool="rubber" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentTool="rubber" />);
       expect(screen.getByTitle('Rubber')).toHaveClass('bg-blue-600');
     });
 
     it('should highlight bucket tool when selected', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentTool="bucket" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentTool="bucket" />);
       expect(screen.getByTitle('Bucket Fill (Paper)')).toHaveClass('bg-blue-600');
     });
 
     it('should call onSelectTool when pan is clicked', () => {
       const onSelectTool = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSelectTool={onSelectTool} />);
 
       fireEvent.click(screen.getByTitle('Pan (or right-click drag)'));
       expect(onSelectTool).toHaveBeenCalledWith('pan');
     });
 
     it('should highlight pan tool when selected', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentTool="pan" />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentTool="pan" />);
       expect(screen.getByTitle('Pan (or right-click drag)')).toHaveClass('bg-blue-600');
     });
   });
@@ -155,7 +165,7 @@ describe('SpriteToolbarContent', () => {
   describe('bright toggle', () => {
     it('should call onBrightChange when toggled', () => {
       const onBrightChange = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onBrightChange={onBrightChange} currentBright={false} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onBrightChange={onBrightChange} currentBright={false} />);
 
       fireEvent.click(screen.getByTitle('Toggle bright'));
       expect(onBrightChange).toHaveBeenCalledWith(true);
@@ -163,26 +173,26 @@ describe('SpriteToolbarContent', () => {
 
     it('should toggle from bright to normal', () => {
       const onBrightChange = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onBrightChange={onBrightChange} currentBright={true} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onBrightChange={onBrightChange} currentBright={true} />);
 
       fireEvent.click(screen.getByTitle('Toggle bright'));
       expect(onBrightChange).toHaveBeenCalledWith(false);
     });
 
     it('should show yellow background when bright is on', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentBright={true} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentBright={true} />);
       expect(screen.getByTitle('Toggle bright')).toHaveClass('bg-yellow-500');
     });
 
     it('should show gray background when bright is off', () => {
-      render(<SpriteToolbarContent {...defaultProps} currentBright={false} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} currentBright={false} />);
       expect(screen.getByTitle('Toggle bright')).toHaveClass('bg-gray-600');
     });
   });
 
   describe('size controls', () => {
     it('should display current width and height', () => {
-      render(<SpriteToolbarContent {...defaultProps} charsWidth={5} charsHeight={4} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} charsWidth={5} charsHeight={4} />);
       const inputs = screen.getAllByRole('spinbutton');
       expect(inputs[0]).toHaveValue(5);
       expect(inputs[1]).toHaveValue(4);
@@ -190,7 +200,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onResize when width changes', () => {
       const onResize = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
 
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '10' } });
@@ -199,7 +209,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onResize when height changes', () => {
       const onResize = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
 
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '5' } });
@@ -208,7 +218,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should default to 1 for invalid width input', () => {
       const onResize = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
 
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '' } });
@@ -217,7 +227,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should default to 1 for invalid height input', () => {
       const onResize = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onResize={onResize} charsWidth={7} charsHeight={3} />);
 
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '' } });
@@ -225,25 +235,25 @@ describe('SpriteToolbarContent', () => {
     });
 
     it('should display character count', () => {
-      render(<SpriteToolbarContent {...defaultProps} charsWidth={7} charsHeight={3} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} charsWidth={7} charsHeight={3} />);
       expect(screen.getByText('21/21')).toBeInTheDocument();
     });
   });
 
   describe('scale control', () => {
     it('should display current scale', () => {
-      render(<SpriteToolbarContent {...defaultProps} pixelSize={15} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} pixelSize={15} />);
       expect(screen.getByText('15x')).toBeInTheDocument();
     });
 
     it('should have correct slider value', () => {
-      render(<SpriteToolbarContent {...defaultProps} pixelSize={12} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} pixelSize={12} />);
       expect(screen.getByRole('slider')).toHaveValue('12');
     });
 
     it('should call onPixelSizeChange when slider changes', () => {
       const onPixelSizeChange = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onPixelSizeChange={onPixelSizeChange} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onPixelSizeChange={onPixelSizeChange} />);
 
       fireEvent.change(screen.getByRole('slider'), { target: { value: '18' } });
       expect(onPixelSizeChange).toHaveBeenCalledWith(18);
@@ -253,7 +263,7 @@ describe('SpriteToolbarContent', () => {
   describe('file operations', () => {
     it('should call onLoad when Load is clicked', () => {
       const onLoad = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onLoad={onLoad} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onLoad={onLoad} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Load' }));
       expect(onLoad).toHaveBeenCalledTimes(1);
@@ -261,7 +271,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onSave when Save is clicked', () => {
       const onSave = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onSave={onSave} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onSave={onSave} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -269,7 +279,7 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onExport when Export is clicked', () => {
       const onExport = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onExport={onExport} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onExport={onExport} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Export' }));
       expect(onExport).toHaveBeenCalledTimes(1);
@@ -277,10 +287,83 @@ describe('SpriteToolbarContent', () => {
 
     it('should call onClear when Clear is clicked', () => {
       const onClear = jest.fn();
-      render(<SpriteToolbarContent {...defaultProps} onClear={onClear} />);
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} onClear={onClear} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
       expect(onClear).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('info tooltips', () => {
+    it('should render info icons for tools', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButtons = screen.getAllByTitle('More info');
+      expect(infoButtons.length).toBeGreaterThanOrEqual(5); // At least pencil, line, rubber, bucket, pan
+    });
+
+    it('should show pencil tool info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButtons = screen.getAllByRole('button', { name: /info about pencil/i });
+      expect(infoButtons.length).toBeGreaterThan(0);
+
+      fireEvent.click(infoButtons[0]);
+      expect(screen.getByText(/draw individual pixels/i)).toBeInTheDocument();
+    });
+
+    it('should show line tool info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about line/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/draw straight lines/i)).toBeInTheDocument();
+    });
+
+    it('should show rubber tool info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about rubber/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/erase pixels/i)).toBeInTheDocument();
+    });
+
+    it('should show bucket tool info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about bucket/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/fill an area/i)).toBeInTheDocument();
+    });
+
+    it('should show pan tool info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about pan/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/navigate the canvas/i)).toBeInTheDocument();
+    });
+
+    it('should show bright info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about bright/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/toggle bright mode/i)).toBeInTheDocument();
+    });
+
+    it('should show scale info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about scale/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/adjust the zoom level/i)).toBeInTheDocument();
+    });
+
+    it('should show trace image info when clicked', () => {
+      renderWithProvider(<SpriteToolbarContent {...defaultProps} />);
+      const infoButton = screen.getByRole('button', { name: /info about trace image/i });
+
+      fireEvent.click(infoButton);
+      expect(screen.getByText(/load a reference image/i)).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EditorToolbar } from '@/components/EditorToolbar';
+import { InfoTooltipProvider } from '@/components/InfoTooltip';
+
+// Helper to render with InfoTooltipProvider
+const renderWithProvider = (ui: React.ReactElement) => {
+  return render(
+    <InfoTooltipProvider>
+      {ui}
+    </InfoTooltipProvider>
+  );
+};
 
 describe('EditorToolbar', () => {
   const defaultProps = {
@@ -13,12 +23,12 @@ describe('EditorToolbar', () => {
 
   describe('rendering', () => {
     it('should render with default title', () => {
-      render(<EditorToolbar {...defaultProps} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} />);
       expect(screen.getByText('ZX Editor')).toBeInTheDocument();
     });
 
     it('should render with custom title', () => {
-      render(<EditorToolbar {...defaultProps} title="Custom Title" />);
+      renderWithProvider(<EditorToolbar {...defaultProps} title="Custom Title" />);
       expect(screen.getByText('Custom Title')).toBeInTheDocument();
     });
 
@@ -32,17 +42,17 @@ describe('EditorToolbar', () => {
     });
 
     it('should render close button when open', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={true} />);
       expect(screen.getByTitle('Close toolbar')).toBeInTheDocument();
     });
 
     it('should render open button when closed', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={false} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={false} />);
       expect(screen.getByTitle('Open toolbar')).toBeInTheDocument();
     });
 
     it('should not render open button when toolbar is open', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={true} />);
       expect(screen.queryByTitle('Open toolbar')).not.toBeInTheDocument();
     });
   });
@@ -50,7 +60,7 @@ describe('EditorToolbar', () => {
   describe('toggle behavior', () => {
     it('should call onToggle when close button is clicked', () => {
       const onToggle = jest.fn();
-      render(<EditorToolbar {...defaultProps} onToggle={onToggle} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} onToggle={onToggle} isOpen={true} />);
 
       fireEvent.click(screen.getByTitle('Close toolbar'));
       expect(onToggle).toHaveBeenCalledTimes(1);
@@ -58,7 +68,7 @@ describe('EditorToolbar', () => {
 
     it('should call onToggle when open button is clicked', () => {
       const onToggle = jest.fn();
-      render(<EditorToolbar {...defaultProps} onToggle={onToggle} isOpen={false} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} onToggle={onToggle} isOpen={false} />);
 
       fireEvent.click(screen.getByTitle('Open toolbar'));
       expect(onToggle).toHaveBeenCalledTimes(1);
@@ -67,13 +77,13 @@ describe('EditorToolbar', () => {
 
   describe('visibility', () => {
     it('should translate toolbar into view when open', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={true} />);
       const toolbar = document.querySelector('.fixed.top-10');
       expect(toolbar).toHaveClass('translate-x-0');
     });
 
     it('should translate toolbar out of view when closed', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={false} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={false} />);
       const toolbar = document.querySelector('.fixed.top-10');
       expect(toolbar).toHaveClass('-translate-x-full');
     });
@@ -81,21 +91,79 @@ describe('EditorToolbar', () => {
 
   describe('styling', () => {
     it('should have correct z-index for toolbar', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={true} />);
       const toolbar = document.querySelector('.fixed.top-10');
       expect(toolbar).toHaveClass('z-40');
     });
 
     it('should have correct z-index for toggle button', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={false} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={false} />);
       const button = screen.getByTitle('Open toolbar');
       expect(button).toHaveClass('z-50');
     });
 
     it('should have transition classes for animation', () => {
-      render(<EditorToolbar {...defaultProps} isOpen={true} />);
+      renderWithProvider(<EditorToolbar {...defaultProps} isOpen={true} />);
       const toolbar = document.querySelector('.fixed.top-10');
       expect(toolbar).toHaveClass('transition-transform', 'duration-300');
+    });
+  });
+
+  describe('info tooltip', () => {
+    it('should not render info icon when no infoId provided', () => {
+      renderWithProvider(<EditorToolbar {...defaultProps} title="Test Editor" />);
+      expect(screen.queryByRole('button', { name: /info about test editor/i })).not.toBeInTheDocument();
+    });
+
+    it('should not render info icon when no infoDescription provided', () => {
+      renderWithProvider(<EditorToolbar {...defaultProps} title="Test Editor" infoId="test-id" />);
+      expect(screen.queryByRole('button', { name: /info about test editor/i })).not.toBeInTheDocument();
+    });
+
+    it('should render info icon when both infoId and infoDescription provided', () => {
+      renderWithProvider(
+        <EditorToolbar
+          {...defaultProps}
+          title="Test Editor"
+          infoId="test-id"
+          infoDescription="Test description"
+        />
+      );
+      expect(screen.getByRole('button', { name: /info about test editor/i })).toBeInTheDocument();
+    });
+
+    it('should show description when info icon clicked', () => {
+      renderWithProvider(
+        <EditorToolbar
+          {...defaultProps}
+          title="Test Editor"
+          infoId="test-id"
+          infoDescription="This is the test description"
+        />
+      );
+
+      const infoButton = screen.getByRole('button', { name: /info about test editor/i });
+      fireEvent.click(infoButton);
+
+      expect(screen.getByText('This is the test description')).toBeInTheDocument();
+    });
+
+    it('should show title in tooltip when info icon clicked', () => {
+      renderWithProvider(
+        <EditorToolbar
+          {...defaultProps}
+          title="My Custom Editor"
+          infoId="test-id"
+          infoDescription="Description text"
+        />
+      );
+
+      const infoButton = screen.getByRole('button', { name: /info about my custom editor/i });
+      fireEvent.click(infoButton);
+
+      // Title appears both in header and tooltip
+      const titles = screen.getAllByText('My Custom Editor');
+      expect(titles.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

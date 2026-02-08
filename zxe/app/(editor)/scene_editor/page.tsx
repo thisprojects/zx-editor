@@ -53,6 +53,8 @@ export default function SceneEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Scene Editor"
+        infoId="scene-editor-info"
+        infoDescription="Draw full ZX Spectrum screens (256x192 pixels, 32x24 characters). Each 8x8 character cell can have 1 ink and 1 paper colour. The grid shows character cell boundaries to help avoid colour clash."
       >
         <SceneToolbarContent
           currentTool={drawing.currentTool}

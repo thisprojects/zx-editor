@@ -61,6 +61,8 @@ export default function LevelEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Level Editor"
+        infoId="level-editor-info"
+        infoDescription="Build game levels using tiles. Each screen is 256x192 pixels (32x24 characters). Load tiles created in the Tile Editor, then place them on screens. Tile size must match across all tiles in a level. Supports multiple screens per level."
       >
         <LevelToolbarContent
           tileSize={drawing.tileSize}
