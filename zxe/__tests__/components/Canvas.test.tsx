@@ -50,6 +50,7 @@ describe('Canvas component', () => {
       backgroundScale: 1,
       backgroundAdjustMode: false,
       onSetIsDrawing: jest.fn(),
+      onStrokeStart: jest.fn(),
       onSetPixel: jest.fn(),
       onDrawLine: jest.fn(),
       onSetLineStart: jest.fn(),

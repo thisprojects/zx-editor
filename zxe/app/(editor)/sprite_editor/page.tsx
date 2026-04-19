@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useDrawing } from '@/hooks/useDrawing';
 import { useProject } from '@/hooks/useProject';
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { SpriteToolbarContent } from '@/components/SpriteToolbarContent';
 import { Canvas } from '@/components/Canvas';
@@ -17,6 +18,8 @@ export default function SpriteEditorPage() {
   const [toolbarOpen, setToolbarOpen] = useState(true);
 
   const drawing = useDrawing();
+
+  useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
 
   const project = useProject({
     pixels: drawing.pixels,
@@ -80,6 +83,10 @@ export default function SpriteEditorPage() {
           onBackgroundAdjustModeChange={drawing.setBackgroundAdjustMode}
           onLoadBackgroundImage={drawing.loadBackgroundImage}
           onClearBackgroundImage={drawing.clearBackgroundImage}
+          onUndo={drawing.undo}
+          onRedo={drawing.redo}
+          canUndo={drawing.canUndo}
+          canRedo={drawing.canRedo}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
@@ -120,6 +127,7 @@ export default function SpriteEditorPage() {
           backgroundScale={drawing.backgroundScale}
           backgroundAdjustMode={drawing.backgroundAdjustMode}
           onSetIsDrawing={drawing.setIsDrawing}
+          onStrokeStart={drawing.pushHistory}
           onSetPixel={drawing.setPixel}
           onDrawLine={drawing.drawLine}
           onSetLineStart={drawing.setLineStart}

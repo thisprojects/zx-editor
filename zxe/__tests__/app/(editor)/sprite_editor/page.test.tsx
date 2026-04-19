@@ -39,6 +39,19 @@ jest.mock('@/hooks/useDrawing', () => ({
     setBackgroundEnabled: jest.fn(),
     loadBackgroundImage: jest.fn(),
     clearBackgroundImage: jest.fn(),
+    backgroundScale: 1,
+    backgroundAdjustMode: false,
+    setBackgroundScale: jest.fn(),
+    setBackgroundAdjustMode: jest.fn(),
+    backgroundX: 0,
+    backgroundY: 0,
+    setBackgroundX: jest.fn(),
+    setBackgroundY: jest.fn(),
+    undo: jest.fn(),
+    redo: jest.fn(),
+    canUndo: false,
+    canRedo: false,
+    pushHistory: jest.fn(),
   }),
 }));
 
@@ -245,6 +258,28 @@ describe('Sprite Editor page', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
 
       expect(screen.queryByText('Save Project')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('undo/redo buttons', () => {
+    it('should render undo button', () => {
+      render(<SpriteEditorPage />);
+      expect(screen.getByTitle('Undo (Ctrl+Z)')).toBeInTheDocument();
+    });
+
+    it('should render redo button', () => {
+      render(<SpriteEditorPage />);
+      expect(screen.getByTitle('Redo (Ctrl+Y)')).toBeInTheDocument();
+    });
+
+    it('should disable undo button when canUndo is false', () => {
+      render(<SpriteEditorPage />);
+      expect(screen.getByTitle('Undo (Ctrl+Z)')).toBeDisabled();
+    });
+
+    it('should disable redo button when canRedo is false', () => {
+      render(<SpriteEditorPage />);
+      expect(screen.getByTitle('Redo (Ctrl+Y)')).toBeDisabled();
     });
   });
 

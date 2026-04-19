@@ -1,7 +1,15 @@
 import { useState, useCallback } from 'react';
+import { useHistory } from './useHistory';
 import { Tool, Attribute, Point } from '@/types';
 import { CHAR_SIZE, DEFAULT_CHARS_WIDTH, DEFAULT_CHARS_HEIGHT, MAX_UDG_CHARS } from '@/constants';
 import { getLinePoints, createEmptyPixels } from '@/utils/drawing';
+
+interface DrawingState {
+  pixels: boolean[][];
+  attributes: Attribute[][];
+  charsWidth: number;
+  charsHeight: number;
+}
 
 interface UseDrawingProps {
   initialCharsWidth?: number;
@@ -12,8 +20,29 @@ export function useDrawing({
   initialCharsWidth = DEFAULT_CHARS_WIDTH,
   initialCharsHeight = DEFAULT_CHARS_HEIGHT,
 }: UseDrawingProps = {}) {
-  const [charsWidth, setCharsWidth] = useState(initialCharsWidth);
-  const [charsHeight, setCharsHeight] = useState(initialCharsHeight);
+  const {
+    state: drawingState,
+    setState: setDrawingState,
+    push: pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory,
+  } = useHistory<DrawingState>({
+    pixels: createEmptyPixels(initialCharsWidth * CHAR_SIZE, initialCharsHeight * CHAR_SIZE),
+    attributes: Array(initialCharsHeight)
+      .fill(null)
+      .map(() =>
+        Array(initialCharsWidth)
+          .fill(null)
+          .map(() => ({ ink: 7, paper: 0, bright: true }))
+      ),
+    charsWidth: initialCharsWidth,
+    charsHeight: initialCharsHeight,
+  });
+
+  const { pixels, attributes, charsWidth, charsHeight } = drawingState;
 
   // Background image for tracing (editor-only, not saved)
   const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
@@ -27,22 +56,6 @@ export function useDrawing({
   const canvasWidth = charsWidth * CHAR_SIZE;
   const canvasHeight = charsHeight * CHAR_SIZE;
 
-  // Pixel data: 2D array of booleans (true = ink, false = paper)
-  const [pixels, setPixels] = useState<boolean[][]>(() =>
-    createEmptyPixels(canvasWidth, canvasHeight)
-  );
-
-  // Attribute data: 2D array of attributes (per character cell)
-  const [attributes, setAttributes] = useState<Attribute[][]>(() =>
-    Array(charsHeight)
-      .fill(null)
-      .map(() =>
-        Array(charsWidth)
-          .fill(null)
-          .map(() => ({ ink: 7, paper: 0, bright: true }))
-      )
-  );
-
   const [currentInk, setCurrentInk] = useState(7);
   const [currentBright, setCurrentBright] = useState(true);
   const [currentTool, setCurrentTool] = useState<Tool>('pencil');
@@ -55,47 +68,40 @@ export function useDrawing({
     const charX = Math.floor(x / CHAR_SIZE);
     const charY = Math.floor(y / CHAR_SIZE);
 
-    setPixels((prev) => {
-      const newPixels = prev.map((row) => [...row]);
+    setDrawingState((prev) => {
+      const newPixels = prev.pixels.map((row) => [...row]);
       newPixels[y][x] = isInk;
-      return newPixels;
-    });
 
-    // Update attribute for this character cell when drawing (not erasing)
-    // Only update ink and bright, preserve the existing paper colour
-    if (isInk) {
-      setAttributes((prev) => {
-        const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
+      if (isInk) {
+        const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
         newAttrs[charY][charX] = {
           ...newAttrs[charY][charX],
           ink: currentInk,
           bright: currentBright,
         };
-        return newAttrs;
-      });
-    }
-  }, [currentInk, currentBright]);
+        return { ...prev, pixels: newPixels, attributes: newAttrs };
+      }
+
+      return { ...prev, pixels: newPixels };
+    });
+  }, [currentInk, currentBright, setDrawingState]);
 
   // Draw a line between two points
   const drawLine = useCallback((start: Point, end: Point) => {
-    const points = getLinePoints(start.x, start.y, end.x, end.y);
-    const affectedCells = new Set<string>();
+    pushHistory();
+    setDrawingState((prev) => {
+      const points = getLinePoints(start.x, start.y, end.x, end.y);
+      const affectedCells = new Set<string>();
+      const newPixels = prev.pixels.map((row) => [...row]);
 
-    setPixels((prev) => {
-      const newPixels = prev.map((row) => [...row]);
       for (const point of points) {
         newPixels[point.y][point.x] = true;
         const charX = Math.floor(point.x / CHAR_SIZE);
         const charY = Math.floor(point.y / CHAR_SIZE);
         affectedCells.add(`${charX},${charY}`);
       }
-      return newPixels;
-    });
 
-    // Update attributes for all affected cells
-    // Only update ink and bright, preserve the existing paper colour
-    setAttributes((prev) => {
-      const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
+      const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
       affectedCells.forEach((key) => {
         const [charX, charY] = key.split(',').map(Number);
         newAttrs[charY][charX] = {
@@ -104,25 +110,27 @@ export function useDrawing({
           bright: currentBright,
         };
       });
-      return newAttrs;
+
+      return { ...prev, pixels: newPixels, attributes: newAttrs };
     });
-  }, [currentInk, currentBright]);
+  }, [currentInk, currentBright, pushHistory, setDrawingState]);
 
   // Bucket fill: set paper colour for the 8x8 cell at given pixel coordinates
   const bucketFill = useCallback((x: number, y: number) => {
     const charX = Math.floor(x / CHAR_SIZE);
     const charY = Math.floor(y / CHAR_SIZE);
 
-    setAttributes((prev) => {
-      const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
+    pushHistory();
+    setDrawingState((prev) => {
+      const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
       newAttrs[charY][charX] = {
         ...newAttrs[charY][charX],
         paper: currentInk,
         bright: currentBright,
       };
-      return newAttrs;
+      return { ...prev, attributes: newAttrs };
     });
-  }, [currentInk, currentBright]);
+  }, [currentInk, currentBright, pushHistory, setDrawingState]);
 
   // Select a tool
   const selectTool = useCallback((tool: Tool) => {
@@ -133,19 +141,21 @@ export function useDrawing({
 
   // Clear canvas
   const clearCanvas = useCallback(() => {
-    setPixels(createEmptyPixels(canvasWidth, canvasHeight));
-    setAttributes(
-      Array(charsHeight)
+    pushHistory();
+    setDrawingState((prev) => ({
+      ...prev,
+      pixels: createEmptyPixels(prev.charsWidth * CHAR_SIZE, prev.charsHeight * CHAR_SIZE),
+      attributes: Array(prev.charsHeight)
         .fill(null)
         .map(() =>
-          Array(charsWidth)
+          Array(prev.charsWidth)
             .fill(null)
             .map(() => ({ ink: 7, paper: 0, bright: true }))
-        )
-    );
+        ),
+    }));
     setLineStart(null);
     setLinePreview(null);
-  }, [canvasWidth, canvasHeight, charsWidth, charsHeight]);
+  }, [pushHistory, setDrawingState]);
 
   // Resize canvas (preserves existing content where possible)
   const resizeCanvas = useCallback((newWidth: number, newHeight: number) => {
@@ -161,19 +171,15 @@ export function useDrawing({
     const newPixelWidth = newWidth * CHAR_SIZE;
     const newPixelHeight = newHeight * CHAR_SIZE;
 
-    // Resize pixel array, preserving existing data
-    setPixels((prev) => {
+    pushHistory();
+    setDrawingState((prev) => {
       const newPixels: boolean[][] = createEmptyPixels(newPixelWidth, newPixelHeight);
-      for (let y = 0; y < Math.min(prev.length, newPixelHeight); y++) {
-        for (let x = 0; x < Math.min(prev[y]?.length || 0, newPixelWidth); x++) {
-          newPixels[y][x] = prev[y][x];
+      for (let y = 0; y < Math.min(prev.pixels.length, newPixelHeight); y++) {
+        for (let x = 0; x < Math.min(prev.pixels[y]?.length || 0, newPixelWidth); x++) {
+          newPixels[y][x] = prev.pixels[y][x];
         }
       }
-      return newPixels;
-    });
 
-    // Resize attribute array, preserving existing data
-    setAttributes((prev) => {
       const newAttrs: Attribute[][] = Array(newHeight)
         .fill(null)
         .map(() =>
@@ -181,19 +187,17 @@ export function useDrawing({
             .fill(null)
             .map(() => ({ ink: 7, paper: 0, bright: true }))
         );
-      for (let y = 0; y < Math.min(prev.length, newHeight); y++) {
-        for (let x = 0; x < Math.min(prev[y]?.length || 0, newWidth); x++) {
-          newAttrs[y][x] = { ...prev[y][x] };
+      for (let y = 0; y < Math.min(prev.attributes.length, newHeight); y++) {
+        for (let x = 0; x < Math.min(prev.attributes[y]?.length || 0, newWidth); x++) {
+          newAttrs[y][x] = { ...prev.attributes[y][x] };
         }
       }
-      return newAttrs;
-    });
 
-    setCharsWidth(newWidth);
-    setCharsHeight(newHeight);
+      return { pixels: newPixels, attributes: newAttrs, charsWidth: newWidth, charsHeight: newHeight };
+    });
     setLineStart(null);
     setLinePreview(null);
-  }, []);
+  }, [pushHistory, setDrawingState]);
 
   // Load project data
   const loadProjectData = useCallback((
@@ -202,13 +206,16 @@ export function useDrawing({
     loadedPixels: boolean[][],
     loadedAttributes: Attribute[][]
   ) => {
-    setCharsWidth(loadedWidth);
-    setCharsHeight(loadedHeight);
-    setPixels(loadedPixels);
-    setAttributes(loadedAttributes);
+    clearHistory();
+    setDrawingState({
+      pixels: loadedPixels,
+      attributes: loadedAttributes,
+      charsWidth: loadedWidth,
+      charsHeight: loadedHeight,
+    });
     setLineStart(null);
     setLinePreview(null);
-  }, []);
+  }, [clearHistory, setDrawingState]);
 
   // Load background image for tracing
   const loadBackgroundImage = useCallback((file: File) => {
@@ -260,6 +267,13 @@ export function useDrawing({
     clearCanvas,
     resizeCanvas,
     loadProjectData,
+
+    // Undo/redo
+    pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
 
     // Background image (editor-only)
     backgroundImage,

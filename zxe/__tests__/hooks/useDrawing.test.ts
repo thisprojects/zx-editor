@@ -572,6 +572,162 @@ describe('useDrawing hook', () => {
     });
   });
 
+  describe('undo/redo', () => {
+    it('should initialize with canUndo false', () => {
+      const { result } = renderHook(() => useDrawing());
+      expect(result.current.canUndo).toBe(false);
+    });
+
+    it('should initialize with canRedo false', () => {
+      const { result } = renderHook(() => useDrawing());
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should enable canUndo after pushHistory', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.pushHistory();
+      });
+
+      expect(result.current.canUndo).toBe(true);
+    });
+
+    it('should undo a pixel drawn via pushHistory + setPixel', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.pushHistory();
+        result.current.setPixel(0, 0, true);
+      });
+
+      expect(result.current.pixels[0][0]).toBe(true);
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.pixels[0][0]).toBe(false);
+    });
+
+    it('should redo after undo', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.pushHistory();
+        result.current.setPixel(0, 0, true);
+      });
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.pixels[0][0]).toBe(false);
+      expect(result.current.canRedo).toBe(true);
+
+      act(() => {
+        result.current.redo();
+      });
+
+      expect(result.current.pixels[0][0]).toBe(true);
+    });
+
+    it('should auto-push history before drawLine', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.drawLine({ x: 0, y: 0 }, { x: 4, y: 0 });
+      });
+
+      expect(result.current.canUndo).toBe(true);
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.pixels[0][0]).toBe(false);
+    });
+
+    it('should auto-push history before bucketFill', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.setCurrentInk(3);
+        result.current.bucketFill(0, 0);
+      });
+
+      expect(result.current.canUndo).toBe(true);
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.attributes[0][0].paper).toBe(0);
+    });
+
+    it('should auto-push history before clearCanvas', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.setPixel(0, 0, true);
+      });
+
+      act(() => {
+        result.current.clearCanvas();
+      });
+
+      expect(result.current.canUndo).toBe(true);
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.pixels[0][0]).toBe(true);
+    });
+
+    it('should auto-push history before resizeCanvas', () => {
+      const { result } = renderHook(() =>
+        useDrawing({ initialCharsWidth: 2, initialCharsHeight: 2 })
+      );
+
+      act(() => {
+        result.current.resizeCanvas(4, 4);
+      });
+
+      expect(result.current.canUndo).toBe(true);
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(result.current.charsWidth).toBe(2);
+      expect(result.current.charsHeight).toBe(2);
+    });
+
+    it('should clear history after loadProjectData', () => {
+      const { result } = renderHook(() => useDrawing());
+
+      act(() => {
+        result.current.pushHistory();
+        result.current.setPixel(0, 0, true);
+      });
+
+      expect(result.current.canUndo).toBe(true);
+
+      const newPixels = Array(16).fill(null).map(() => Array(16).fill(false));
+      const newAttributes = Array(2).fill(null).map(() =>
+        Array(2).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      );
+
+      act(() => {
+        result.current.loadProjectData(2, 2, newPixels, newAttributes);
+      });
+
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.canRedo).toBe(false);
+    });
+  });
+
   describe('color setters', () => {
     it('should update currentInk', () => {
       const { result } = renderHook(() => useDrawing());

@@ -6,6 +6,7 @@ import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
 import { InfoTooltip } from './InfoTooltip';
+import { UndoRedoButtons } from './UndoRedoButtons';
 import { MAX_UDG_CHARS } from '@/constants';
 
 interface SpriteToolbarContentProps {
@@ -31,6 +32,10 @@ interface SpriteToolbarContentProps {
   onBackgroundAdjustModeChange: (enabled: boolean) => void;
   onLoadBackgroundImage: (file: File) => void;
   onClearBackgroundImage: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -60,6 +65,10 @@ export function SpriteToolbarContent({
   onBackgroundAdjustModeChange,
   onLoadBackgroundImage,
   onClearBackgroundImage,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onLoad,
   onSave,
   onExport,
@@ -371,6 +380,13 @@ export function SpriteToolbarContent({
           </>
         )}
       </div>
+
+      <UndoRedoButtons
+        onUndo={onUndo}
+        onRedo={onRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
 
       {/* File operations */}
       <div className="border border-gray-600 rounded p-2">
