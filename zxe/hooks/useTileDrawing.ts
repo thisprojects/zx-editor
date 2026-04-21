@@ -1,10 +1,26 @@
 import { useState, useCallback } from 'react';
+import { useHistory } from './useHistory';
 import { Tool, Attribute, Point, TileSize } from '@/types';
 import { CHAR_SIZE, TILE_SIZES, DEFAULT_TILE_SIZE } from '@/constants';
 import { getLinePoints, createEmptyPixels } from '@/utils/drawing';
 
+interface TileDrawingState {
+  pixels: boolean[][];
+  attributes: Attribute[][];
+}
+
 interface UseTileDrawingProps {
   initialTileSize?: TileSize;
+}
+
+function makeEmptyState(size: TileSize): TileDrawingState {
+  const cfg = TILE_SIZES[size];
+  return {
+    pixels: createEmptyPixels(cfg.pixels, cfg.pixels),
+    attributes: Array(cfg.chars).fill(null).map(() =>
+      Array(cfg.chars).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+    ),
+  };
 }
 
 export function useTileDrawing({
@@ -12,28 +28,25 @@ export function useTileDrawing({
 }: UseTileDrawingProps = {}) {
   const [tileSize, setTileSizeState] = useState<TileSize>(initialTileSize);
 
-  // Derive dimensions from tile size
+  const {
+    state: drawingState,
+    setState: setDrawingState,
+    push: pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
+    clearHistory,
+  } = useHistory<TileDrawingState>(makeEmptyState(initialTileSize));
+
+  const { pixels, attributes } = drawingState;
+
   const tileSizeConfig = TILE_SIZES[tileSize];
   const charsWidth = tileSizeConfig.chars;
   const charsHeight = tileSizeConfig.chars;
   const canvasWidth = tileSizeConfig.pixels;
   const canvasHeight = tileSizeConfig.pixels;
-
-  // Pixel data: 2D array of booleans (true = ink, false = paper)
-  const [pixels, setPixels] = useState<boolean[][]>(() =>
-    createEmptyPixels(canvasWidth, canvasHeight)
-  );
-
-  // Attribute data: 2D array of attributes (per character cell)
-  const [attributes, setAttributes] = useState<Attribute[][]>(() =>
-    Array(charsHeight)
-      .fill(null)
-      .map(() =>
-        Array(charsWidth)
-          .fill(null)
-          .map(() => ({ ink: 7, paper: 0, bright: true }))
-      )
-  );
 
   const [currentInk, setCurrentInk] = useState(7);
   const [currentBright, setCurrentBright] = useState(true);
@@ -42,186 +55,131 @@ export function useTileDrawing({
   const [lineStart, setLineStart] = useState<Point | null>(null);
   const [linePreview, setLinePreview] = useState<Point | null>(null);
 
-  // Set a pixel and update the character's attribute
   const setPixel = useCallback((x: number, y: number, isInk: boolean) => {
     const charX = Math.floor(x / CHAR_SIZE);
     const charY = Math.floor(y / CHAR_SIZE);
 
-    setPixels((prev) => {
-      if (y < 0 || y >= prev.length || x < 0 || x >= (prev[0]?.length || 0)) {
+    setDrawingState((prev) => {
+      if (y < 0 || y >= prev.pixels.length || x < 0 || x >= (prev.pixels[0]?.length || 0)) {
         return prev;
       }
-      const newPixels = prev.map((row) => [...row]);
+      const newPixels = prev.pixels.map((row) => [...row]);
       newPixels[y][x] = isInk;
-      return newPixels;
+
+      if (isInk && charY >= 0 && charY < prev.attributes.length && charX >= 0 && charX < (prev.attributes[0]?.length || 0)) {
+        const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
+        newAttrs[charY][charX] = { ...newAttrs[charY][charX], ink: currentInk, bright: currentBright };
+        return { pixels: newPixels, attributes: newAttrs };
+      }
+      return { ...prev, pixels: newPixels };
     });
+  }, [currentInk, currentBright, setDrawingState]);
 
-    // Update attribute for this character cell when drawing (not erasing)
-    // Only update ink and bright, preserve the existing paper colour
-    if (isInk) {
-      setAttributes((prev) => {
-        if (charY < 0 || charY >= prev.length || charX < 0 || charX >= (prev[0]?.length || 0)) {
-          return prev;
-        }
-        const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
-        newAttrs[charY][charX] = {
-          ...newAttrs[charY][charX],
-          ink: currentInk,
-          bright: currentBright,
-        };
-        return newAttrs;
-      });
-    }
-  }, [currentInk, currentBright]);
-
-  // Draw a line between two points
   const drawLine = useCallback((start: Point, end: Point) => {
-    const points = getLinePoints(start.x, start.y, end.x, end.y);
-    const affectedCells = new Set<string>();
+    pushHistory();
+    setDrawingState((prev) => {
+      const points = getLinePoints(start.x, start.y, end.x, end.y);
+      const affectedCells = new Set<string>();
+      const newPixels = prev.pixels.map((row) => [...row]);
 
-    setPixels((prev) => {
-      const newPixels = prev.map((row) => [...row]);
       for (const point of points) {
-        if (point.y >= 0 && point.y < newPixels.length &&
-            point.x >= 0 && point.x < (newPixels[0]?.length || 0)) {
+        if (point.y >= 0 && point.y < newPixels.length && point.x >= 0 && point.x < (newPixels[0]?.length || 0)) {
           newPixels[point.y][point.x] = true;
-          const charX = Math.floor(point.x / CHAR_SIZE);
-          const charY = Math.floor(point.y / CHAR_SIZE);
-          affectedCells.add(`${charX},${charY}`);
+          affectedCells.add(`${Math.floor(point.x / CHAR_SIZE)},${Math.floor(point.y / CHAR_SIZE)}`);
         }
       }
-      return newPixels;
-    });
 
-    // Update attributes for all affected cells
-    // Only update ink and bright, preserve the existing paper colour
-    setAttributes((prev) => {
-      const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
+      const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
       affectedCells.forEach((key) => {
-        const [charX, charY] = key.split(',').map(Number);
-        if (charY >= 0 && charY < newAttrs.length &&
-            charX >= 0 && charX < (newAttrs[0]?.length || 0)) {
-          newAttrs[charY][charX] = {
-            ...newAttrs[charY][charX],
-            ink: currentInk,
-            bright: currentBright,
-          };
+        const [cx, cy] = key.split(',').map(Number);
+        if (cy >= 0 && cy < newAttrs.length && cx >= 0 && cx < (newAttrs[0]?.length || 0)) {
+          newAttrs[cy][cx] = { ...newAttrs[cy][cx], ink: currentInk, bright: currentBright };
         }
       });
-      return newAttrs;
-    });
-  }, [currentInk, currentBright]);
 
-  // Bucket fill: set paper colour for the 8x8 cell at given pixel coordinates
+      return { pixels: newPixels, attributes: newAttrs };
+    });
+  }, [currentInk, currentBright, pushHistory, setDrawingState]);
+
   const bucketFill = useCallback((x: number, y: number) => {
     const charX = Math.floor(x / CHAR_SIZE);
     const charY = Math.floor(y / CHAR_SIZE);
 
-    setAttributes((prev) => {
-      if (charY < 0 || charY >= prev.length || charX < 0 || charX >= (prev[0]?.length || 0)) {
+    pushHistory();
+    setDrawingState((prev) => {
+      if (charY < 0 || charY >= prev.attributes.length || charX < 0 || charX >= (prev.attributes[0]?.length || 0)) {
         return prev;
       }
-      const newAttrs = prev.map((row) => row.map((attr) => ({ ...attr })));
-      newAttrs[charY][charX] = {
-        ...newAttrs[charY][charX],
-        paper: currentInk,
-        bright: currentBright,
-      };
-      return newAttrs;
+      const newAttrs = prev.attributes.map((row) => row.map((attr) => ({ ...attr })));
+      newAttrs[charY][charX] = { ...newAttrs[charY][charX], paper: currentInk, bright: currentBright };
+      return { ...prev, attributes: newAttrs };
     });
-  }, [currentInk, currentBright]);
+  }, [currentInk, currentBright, pushHistory, setDrawingState]);
 
-  // Select a tool
   const selectTool = useCallback((tool: Tool) => {
     setCurrentTool(tool);
     setLineStart(null);
     setLinePreview(null);
   }, []);
 
-  // Clear canvas (uses current tile size)
   const clearCanvas = useCallback(() => {
-    const config = TILE_SIZES[tileSize];
-    setPixels(createEmptyPixels(config.pixels, config.pixels));
-    setAttributes(
-      Array(config.chars)
-        .fill(null)
-        .map(() =>
-          Array(config.chars)
-            .fill(null)
-            .map(() => ({ ink: 7, paper: 0, bright: true }))
-        )
-    );
+    pushHistory();
+    setDrawingState(makeEmptyState(tileSize));
     setLineStart(null);
     setLinePreview(null);
-  }, [tileSize]);
+  }, [tileSize, pushHistory, setDrawingState]);
 
-  // Change tile size (clears the canvas)
   const setTileSize = useCallback((newSize: TileSize) => {
-    const config = TILE_SIZES[newSize];
     setTileSizeState(newSize);
-    setPixels(createEmptyPixels(config.pixels, config.pixels));
-    setAttributes(
-      Array(config.chars)
-        .fill(null)
-        .map(() =>
-          Array(config.chars)
-            .fill(null)
-            .map(() => ({ ink: 7, paper: 0, bright: true }))
-        )
-    );
+    setDrawingState(makeEmptyState(newSize));
+    clearHistory();
     setLineStart(null);
     setLinePreview(null);
-  }, []);
+  }, [setDrawingState, clearHistory]);
 
-  // Load project data
   const loadProjectData = useCallback((
     loadedTileSize: TileSize,
     loadedPixels: boolean[][],
     loadedAttributes: Attribute[][]
   ) => {
     setTileSizeState(loadedTileSize);
-    setPixels(loadedPixels);
-    setAttributes(loadedAttributes);
+    setDrawingState({ pixels: loadedPixels, attributes: loadedAttributes });
+    clearHistory();
     setLineStart(null);
     setLinePreview(null);
-  }, []);
+  }, [setDrawingState, clearHistory]);
 
   return {
-    // Tile size
     tileSize,
     setTileSize,
-
-    // Canvas dimensions (derived from tile size)
     charsWidth,
     charsHeight,
     canvasWidth,
     canvasHeight,
-
-    // Pixel/attribute data
     pixels,
     attributes,
-
-    // Current drawing state
     currentInk,
     setCurrentInk,
     currentBright,
     setCurrentBright,
     currentTool,
     selectTool,
-
-    // Drawing state
     isDrawing,
     setIsDrawing,
     lineStart,
     setLineStart,
     linePreview,
     setLinePreview,
-
-    // Actions
     setPixel,
     drawLine,
     bucketFill,
     clearCanvas,
     loadProjectData,
+    pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
   };
 }

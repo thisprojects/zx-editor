@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSceneDrawing } from '@/hooks/useSceneDrawing';
 import { useSceneProject } from '@/hooks/useSceneProject';
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { SceneToolbarContent } from '@/components/SceneToolbarContent';
 import { SceneCanvas } from '@/components/SceneCanvas';
@@ -18,6 +19,8 @@ export default function SceneEditorPage() {
   const [showGrid, setShowGrid] = useState(true);
 
   const drawing = useSceneDrawing();
+
+  useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
 
   const project = useSceneProject({
     pixels: drawing.pixels,
@@ -78,6 +81,11 @@ export default function SceneEditorPage() {
           onBackgroundAdjustModeChange={drawing.setBackgroundAdjustMode}
           onLoadBackgroundImage={drawing.loadBackgroundImage}
           onClearBackgroundImage={drawing.clearBackgroundImage}
+          onUndo={drawing.undo}
+          onRedo={drawing.redo}
+          canUndo={drawing.canUndo}
+          canRedo={drawing.canRedo}
+          historyIndex={drawing.historyIndex}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
@@ -116,6 +124,7 @@ export default function SceneEditorPage() {
           backgroundY={drawing.backgroundY}
           backgroundScale={drawing.backgroundScale}
           backgroundAdjustMode={drawing.backgroundAdjustMode}
+          onStrokeStart={drawing.pushHistory}
           onSetIsDrawing={drawing.setIsDrawing}
           onSetPixel={drawing.setPixel}
           onDrawLine={drawing.drawLine}

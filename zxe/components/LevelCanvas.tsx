@@ -14,6 +14,7 @@ interface LevelCanvasProps {
   selectedTileIndex: number | null;
   hoverCell: { col: number; row: number } | null;
   showGrid: boolean;
+  onStrokeStart: () => void;
   onPlaceTile: (col: number, row: number) => void;
   onClearCell: (col: number, row: number) => void;
   onSetHoverCell: (cell: { col: number; row: number } | null) => void;
@@ -29,6 +30,7 @@ export function LevelCanvas({
   selectedTileIndex,
   hoverCell,
   showGrid,
+  onStrokeStart,
   onPlaceTile,
   onClearCell,
   onSetHoverCell,
@@ -113,13 +115,14 @@ export function LevelCanvas({
     if (!coords) return;
 
     // Shift+click to clear
+    onStrokeStart();
     if (e.shiftKey) {
       onClearCell(coords.col, coords.row);
     } else {
       setIsPlacing(true);
       onPlaceTile(coords.col, coords.row);
     }
-  }, [panOffset, getCellCoords, onPlaceTile, onClearCell]);
+  }, [panOffset, getCellCoords, onStrokeStart, onPlaceTile, onClearCell]);
 
   // Handle mouse move
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

@@ -7,6 +7,7 @@ import { TbLine, TbHandStop } from 'react-icons/tb';
 import { IoGrid } from 'react-icons/io5';
 import { ColorPicker } from './ColorPicker';
 import { InfoTooltip } from './InfoTooltip';
+import { UndoRedoButtons } from './UndoRedoButtons';
 
 interface SceneToolbarContentProps {
   currentTool: Tool;
@@ -30,6 +31,11 @@ interface SceneToolbarContentProps {
   onBackgroundAdjustModeChange: (enabled: boolean) => void;
   onLoadBackgroundImage: (file: File) => void;
   onClearBackgroundImage: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -58,6 +64,11 @@ export function SceneToolbarContent({
   onBackgroundAdjustModeChange,
   onLoadBackgroundImage,
   onClearBackgroundImage,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  historyIndex,
   onLoad,
   onSave,
   onExport,
@@ -263,6 +274,14 @@ export function SceneToolbarContent({
             />
             <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
           </div>
+
+          <UndoRedoButtons
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            historyIndex={historyIndex}
+          />
         </div>
       </div>
 

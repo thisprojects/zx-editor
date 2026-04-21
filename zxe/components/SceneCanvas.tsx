@@ -22,6 +22,7 @@ interface SceneCanvasProps {
   backgroundY: number;
   backgroundScale: number;
   backgroundAdjustMode: boolean;
+  onStrokeStart: () => void;
   onSetIsDrawing: (isDrawing: boolean) => void;
   onSetPixel: (x: number, y: number, isInk: boolean) => void;
   onDrawLine: (start: Point, end: Point) => void;
@@ -49,6 +50,7 @@ export function SceneCanvas({
   backgroundY,
   backgroundScale,
   backgroundAdjustMode,
+  onStrokeStart,
   onSetIsDrawing,
   onSetPixel,
   onDrawLine,
@@ -164,9 +166,11 @@ export function SceneCanvas({
     if (!coords) return;
 
     if (currentTool === 'pencil') {
+      onStrokeStart();
       onSetIsDrawing(true);
       onSetPixel(coords.x, coords.y, true);
     } else if (currentTool === 'rubber') {
+      onStrokeStart();
       onSetIsDrawing(true);
       onSetPixel(coords.x, coords.y, false);
     } else if (currentTool === 'line') {

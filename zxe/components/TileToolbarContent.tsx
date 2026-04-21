@@ -5,6 +5,7 @@ import { BsPencilFill, BsEraserFill, BsPaintBucket } from 'react-icons/bs';
 import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
 import { InfoTooltip } from './InfoTooltip';
+import { UndoRedoButtons } from './UndoRedoButtons';
 import { TILE_SIZES } from '@/constants';
 
 interface TileToolbarContentProps {
@@ -18,6 +19,11 @@ interface TileToolbarContentProps {
   onBrightChange: (bright: boolean) => void;
   pixelSize: number;
   onPixelSizeChange: (size: number) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -37,6 +43,11 @@ export function TileToolbarContent({
   onBrightChange,
   pixelSize,
   onPixelSizeChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  historyIndex,
   onLoad,
   onSave,
   onExport,
@@ -233,6 +244,14 @@ export function TileToolbarContent({
             />
             <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
           </div>
+
+          <UndoRedoButtons
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            historyIndex={historyIndex}
+          />
         </div>
       </div>
 

@@ -31,6 +31,7 @@ interface PlayerSpriteCanvasProps {
   backgroundAdjustMode: boolean;
   currentFrameIndex: number;
   totalFrames: number;
+  onStrokeStart: () => void;
   onSetIsDrawing: (drawing: boolean) => void;
   onSetPixel: (x: number, y: number, isInk: boolean) => void;
   onDrawLine: (start: Point, end: Point) => void;
@@ -67,6 +68,7 @@ export function PlayerSpriteCanvas({
   backgroundAdjustMode,
   currentFrameIndex,
   totalFrames,
+  onStrokeStart,
   onSetIsDrawing,
   onSetPixel,
   onDrawLine,
@@ -330,9 +332,11 @@ export function PlayerSpriteCanvas({
     if (!coords) return;
 
     if (currentTool === 'pencil') {
+      onStrokeStart();
       onSetIsDrawing(true);
       onSetPixel(coords.x, coords.y, true);
     } else if (currentTool === 'rubber') {
+      onStrokeStart();
       onSetIsDrawing(true);
       onSetPixel(coords.x, coords.y, false);
     } else if (currentTool === 'line') {

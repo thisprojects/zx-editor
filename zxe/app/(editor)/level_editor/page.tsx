@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLevelDrawing } from '@/hooks/useLevelDrawing';
 import { useLevelProject } from '@/hooks/useLevelProject';
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { LevelToolbarContent } from '@/components/LevelToolbarContent';
 import { LevelCanvas } from '@/components/LevelCanvas';
@@ -18,6 +19,8 @@ export default function LevelEditorPage() {
   const [showGrid, setShowGrid] = useState(true);
 
   const drawing = useLevelDrawing();
+
+  useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
 
   const project = useLevelProject({
     tileSize: drawing.tileSize,
@@ -82,6 +85,11 @@ export default function LevelEditorPage() {
           onToggleGrid={() => setShowGrid(!showGrid)}
           pixelSize={pixelSize}
           onPixelSizeChange={setPixelSize}
+          onUndo={drawing.undo}
+          onRedo={drawing.redo}
+          canUndo={drawing.canUndo}
+          canRedo={drawing.canRedo}
+          historyIndex={drawing.historyIndex}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
@@ -121,6 +129,7 @@ export default function LevelEditorPage() {
           selectedTileIndex={drawing.selectedTileIndex}
           hoverCell={drawing.hoverCell}
           showGrid={showGrid}
+          onStrokeStart={drawing.pushHistory}
           onPlaceTile={drawing.placeTile}
           onClearCell={drawing.clearCell}
           onSetHoverCell={drawing.setHoverCell}

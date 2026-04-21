@@ -354,6 +354,85 @@ describe('useTileDrawing', () => {
     });
   });
 
+  describe('history', () => {
+    it('should start with historyIndex of 1 and no undo/redo', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      expect(result.current.historyIndex).toBe(1);
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should allow undo after drawLine', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      expect(result.current.historyIndex).toBe(2);
+      act(() => { result.current.undo(); });
+      expect(result.current.pixels[0][0]).toBe(false);
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should allow redo after undoing drawLine', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      act(() => { result.current.undo(); });
+      expect(result.current.canRedo).toBe(true);
+      act(() => { result.current.redo(); });
+      expect(result.current.pixels[0][0]).toBe(true);
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should allow undo after bucketFill', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.setCurrentInk(3); });
+      act(() => { result.current.bucketFill(0, 0); });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.attributes[0][0].paper).toBe(0);
+    });
+
+    it('should allow undo after clearCanvas', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.pixels[0][0]).toBe(true);
+      act(() => { result.current.clearCanvas(); });
+      expect(result.current.pixels[0][0]).toBe(false);
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.pixels[0][0]).toBe(true);
+    });
+
+    it('should allow undo of pencil stroke via pushHistory', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.setPixel(0, 0, true); });
+      expect(result.current.pixels[0][0]).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.pixels[0][0]).toBe(false);
+    });
+
+    it('should clear history on setTileSize', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.setTileSize(16); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should clear history on loadProjectData', () => {
+      const { result } = renderHook(() => useTileDrawing());
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      const pixels = Array(8).fill(null).map(() => Array(8).fill(false));
+      const attrs = [[{ ink: 7, paper: 0, bright: true }]];
+      act(() => { result.current.loadProjectData(8, pixels, attrs); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+  });
+
   describe('drawing state', () => {
     it('should update isDrawing', () => {
       const { result } = renderHook(() => useTileDrawing());

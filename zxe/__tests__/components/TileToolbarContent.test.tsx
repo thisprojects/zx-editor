@@ -23,6 +23,11 @@ describe('TileToolbarContent', () => {
     onBrightChange: jest.fn(),
     pixelSize: 15,
     onPixelSizeChange: jest.fn(),
+    onUndo: jest.fn(),
+    onRedo: jest.fn(),
+    canUndo: false,
+    canRedo: false,
+    historyIndex: 1,
     onLoad: jest.fn(),
     onSave: jest.fn(),
     onExport: jest.fn(),
@@ -260,6 +265,57 @@ describe('TileToolbarContent', () => {
       fireEvent.click(screen.getByText('Clear'));
 
       expect(props.onClear).toHaveBeenCalled();
+    });
+  });
+
+  describe('history controls', () => {
+    it('should render undo button', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+      expect(screen.getByTitle('Undo (Ctrl+Z)')).toBeInTheDocument();
+    });
+
+    it('should render redo button', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<TileToolbarContent {...props} />);
+      expect(screen.getByTitle('Redo (Ctrl+Y)')).toBeInTheDocument();
+    });
+
+    it('should display historyIndex', () => {
+      const props = createDefaultProps();
+      props.historyIndex = 3;
+      renderWithProvider(<TileToolbarContent {...props} />);
+      expect(screen.getByText('3')).toBeInTheDocument();
+    });
+
+    it('should disable undo button when canUndo is false', () => {
+      const props = createDefaultProps();
+      props.canUndo = false;
+      renderWithProvider(<TileToolbarContent {...props} />);
+      expect(screen.getByTitle('Undo (Ctrl+Z)')).toBeDisabled();
+    });
+
+    it('should enable undo button when canUndo is true', () => {
+      const props = createDefaultProps();
+      props.canUndo = true;
+      renderWithProvider(<TileToolbarContent {...props} />);
+      expect(screen.getByTitle('Undo (Ctrl+Z)')).not.toBeDisabled();
+    });
+
+    it('should call onUndo when undo button clicked', () => {
+      const props = createDefaultProps();
+      props.canUndo = true;
+      renderWithProvider(<TileToolbarContent {...props} />);
+      fireEvent.click(screen.getByTitle('Undo (Ctrl+Z)'));
+      expect(props.onUndo).toHaveBeenCalled();
+    });
+
+    it('should call onRedo when redo button clicked', () => {
+      const props = createDefaultProps();
+      props.canRedo = true;
+      renderWithProvider(<TileToolbarContent {...props} />);
+      fireEvent.click(screen.getByTitle('Redo (Ctrl+Y)'));
+      expect(props.onRedo).toHaveBeenCalled();
     });
   });
 

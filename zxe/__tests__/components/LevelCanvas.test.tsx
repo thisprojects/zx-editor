@@ -24,6 +24,7 @@ describe('LevelCanvas', () => {
     selectedTileIndex: null as number | null,
     hoverCell: null as { col: number; row: number } | null,
     showGrid: true,
+    onStrokeStart: jest.fn(),
     onPlaceTile: jest.fn(),
     onClearCell: jest.fn(),
     onSetHoverCell: jest.fn(),
@@ -84,6 +85,7 @@ describe('LevelCanvas', () => {
       const canvas = document.querySelector('canvas')!;
       fireEvent.mouseDown(canvas, { button: 0, clientX: 10, clientY: 10 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onPlaceTile).toHaveBeenCalled();
     });
 
@@ -181,6 +183,7 @@ describe('LevelCanvas', () => {
       const canvas = document.querySelector('canvas')!;
       fireEvent.mouseDown(canvas, { button: 1, clientX: 100, clientY: 100 });
 
+      expect(props.onStrokeStart).not.toHaveBeenCalled();
       // After panning starts, the canvas should have grabbing cursor
       expect(canvas).toHaveClass('cursor-grabbing');
     });

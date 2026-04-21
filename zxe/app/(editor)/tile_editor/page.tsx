@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTileDrawing } from '@/hooks/useTileDrawing';
 import { useTileProject } from '@/hooks/useTileProject';
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { TileToolbarContent } from '@/components/TileToolbarContent';
 import { TileCanvas } from '@/components/TileCanvas';
@@ -17,6 +18,8 @@ export default function TileEditorPage() {
   const [toolbarOpen, setToolbarOpen] = useState(true);
 
   const drawing = useTileDrawing();
+
+  useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
 
   const project = useTileProject({
     tileSize: drawing.tileSize,
@@ -67,6 +70,11 @@ export default function TileEditorPage() {
           onBrightChange={drawing.setCurrentBright}
           pixelSize={pixelSize}
           onPixelSizeChange={setPixelSize}
+          onUndo={drawing.undo}
+          onRedo={drawing.redo}
+          canUndo={drawing.canUndo}
+          canRedo={drawing.canRedo}
+          historyIndex={drawing.historyIndex}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
@@ -100,6 +108,7 @@ export default function TileEditorPage() {
           lineStart={drawing.lineStart}
           linePreview={drawing.linePreview}
           isDrawing={drawing.isDrawing}
+          onStrokeStart={drawing.pushHistory}
           onSetIsDrawing={drawing.setIsDrawing}
           onSetPixel={drawing.setPixel}
           onDrawLine={drawing.drawLine}

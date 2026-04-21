@@ -513,6 +513,83 @@ describe('useSoftwareSpriteDrawing', () => {
     });
   });
 
+  describe('history', () => {
+    it('should start with historyIndex of 1 and no undo/redo', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      expect(result.current.historyIndex).toBe(1);
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should allow undo after drawLine (with pushHistory)', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      expect(result.current.historyIndex).toBe(2);
+      act(() => { result.current.undo(); });
+      expect(result.current.pixels[0][0]).toBe(false);
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should allow redo after undoing drawLine', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      act(() => { result.current.undo(); });
+      expect(result.current.canRedo).toBe(true);
+      act(() => { result.current.redo(); });
+      expect(result.current.pixels[0][0]).toBe(true);
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should allow undo after bucketFill (with pushHistory)', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.setCurrentInk(2); });
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.bucketFill(0, 0); });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.attributes[0][0].paper).toBe(0);
+    });
+
+    it('should allow undo of pencil stroke via pushHistory', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.setPixel(0, 0, true); });
+      expect(result.current.pixels[0][0]).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.pixels[0][0]).toBe(false);
+    });
+
+    it('should clear history on setSpriteSize', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.setSpriteSize(24, 24); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should clear history on loadProjectData', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.drawLine({ x: 0, y: 0 }, { x: 7, y: 0 }); });
+      expect(result.current.canUndo).toBe(true);
+      const loadedFrames = [{
+        id: 'f1', name: 'Frame 1',
+        pixels: Array(16).fill(null).map(() => Array(16).fill(false)),
+        attributes: Array(2).fill(null).map(() => Array(2).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))),
+        duration: 100,
+      }];
+      act(() => { result.current.loadProjectData(16, 16, loadedFrames, 0, 10, true); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+  });
+
   describe('background image state', () => {
     it('should initialize with default background values', () => {
       const { result } = renderHook(() => useSoftwareSpriteDrawing());

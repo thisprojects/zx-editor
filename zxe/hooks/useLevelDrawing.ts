@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useHistory } from './useHistory';
 import { TileSize, TileData, ScreenData } from '@/types';
 import { DEFAULT_TILE_SIZE, LEVEL_GRID_SIZES } from '@/constants';
 
@@ -18,13 +19,25 @@ export function useLevelDrawing({
 }: UseLevelDrawingProps = {}) {
   const [tileSize, setTileSizeState] = useState<TileSize>(initialTileSize);
   const [tileLibrary, setTileLibrary] = useState<TileData[]>([]);
-  const [screens, setScreens] = useState<ScreenData[]>(() => {
-    const gridSize = LEVEL_GRID_SIZES[initialTileSize];
-    return [{
-      name: 'Screen 1',
-      map: createEmptyScreenMap(gridSize.cols, gridSize.rows),
-    }];
-  });
+
+  const {
+    state: screensState,
+    setState: setScreensState,
+    push: pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
+    clearHistory,
+  } = useHistory<ScreenData[]>([{
+    name: 'Screen 1',
+    map: createEmptyScreenMap(LEVEL_GRID_SIZES[initialTileSize].cols, LEVEL_GRID_SIZES[initialTileSize].rows),
+  }]);
+
+  const screens = screensState;
+  const setScreens = setScreensState;
+
   const [currentScreenIndex, setCurrentScreenIndex] = useState(0);
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
@@ -161,9 +174,10 @@ export function useLevelDrawing({
       name: 'Screen 1',
       map: createEmptyScreenMap(gridSize.cols, gridSize.rows),
     }]);
+    clearHistory();
     setCurrentScreenIndex(0);
     setSelectedTileIndex(null);
-  }, []);
+  }, [setScreens, clearHistory]);
 
   // Clear current screen
   const clearCurrentScreen = useCallback(() => {
@@ -181,12 +195,13 @@ export function useLevelDrawing({
   // Clear all screens
   const clearAllScreens = useCallback(() => {
     const gridSize = LEVEL_GRID_SIZES[tileSize];
+    pushHistory();
     setScreens([{
       name: 'Screen 1',
       map: createEmptyScreenMap(gridSize.cols, gridSize.rows),
     }]);
     setCurrentScreenIndex(0);
-  }, [tileSize]);
+  }, [tileSize, pushHistory, setScreens]);
 
   // Load project data
   const loadProjectData = useCallback((
@@ -198,10 +213,11 @@ export function useLevelDrawing({
     setTileSizeState(loadedTileSize);
     setTileLibrary(loadedTileLibrary);
     setScreens(loadedScreens);
+    clearHistory();
     setCurrentScreenIndex(loadedCurrentScreenIndex);
     setSelectedTileIndex(null);
     setHoverCell(null);
-  }, []);
+  }, [setScreens, clearHistory]);
 
   return {
     // Tile size
@@ -237,5 +253,13 @@ export function useLevelDrawing({
 
     // Project loading
     loadProjectData,
+
+    // History
+    pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
   };
 }

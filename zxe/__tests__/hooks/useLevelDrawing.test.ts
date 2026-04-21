@@ -533,6 +533,93 @@ describe('useLevelDrawing hook', () => {
     });
   });
 
+  describe('history', () => {
+    it('should start with historyIndex of 1 and no undo/redo', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      expect(result.current.historyIndex).toBe(1);
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.canRedo).toBe(false);
+    });
+
+    it('should allow undo of tile placement via pushHistory', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => {
+        result.current.addTile(createMockTile('tile1', 'Test'));
+        result.current.setSelectedTileIndex(0);
+      });
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.placeTile(0, 0); });
+      expect(result.current.currentScreen.map[0][0]).toBe(0);
+      act(() => { result.current.undo(); });
+      expect(result.current.currentScreen.map[0][0]).toBeNull();
+    });
+
+    it('should allow redo after undoing tile placement', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => {
+        result.current.addTile(createMockTile('tile1', 'Test'));
+        result.current.setSelectedTileIndex(0);
+      });
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.placeTile(0, 0); });
+      act(() => { result.current.undo(); });
+      expect(result.current.canRedo).toBe(true);
+      act(() => { result.current.redo(); });
+      expect(result.current.currentScreen.map[0][0]).toBe(0);
+    });
+
+    it('should allow undo after clearAllScreens', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => {
+        result.current.addTile(createMockTile('tile1', 'Test'));
+        result.current.setSelectedTileIndex(0);
+        result.current.placeTile(0, 0);
+        result.current.addScreen();
+      });
+      expect(result.current.screens.length).toBe(2);
+      act(() => { result.current.clearAllScreens(); });
+      expect(result.current.screens.length).toBe(1);
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.undo(); });
+      expect(result.current.screens.length).toBe(2);
+    });
+
+    it('should increment historyIndex after push', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => { result.current.placeTile(0, 0); });
+      expect(result.current.historyIndex).toBe(2);
+    });
+
+    it('should clear history on setTileSize', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => {
+        result.current.addTile(createMockTile('tile1', 'Test'));
+        result.current.setSelectedTileIndex(0);
+        result.current.placeTile(0, 0);
+      });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.setTileSize(16); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should clear history on loadProjectData', () => {
+      const { result } = renderHook(() => useLevelDrawing());
+      act(() => { result.current.pushHistory(); });
+      act(() => {
+        result.current.addTile(createMockTile('tile1', 'Test'));
+        result.current.setSelectedTileIndex(0);
+        result.current.placeTile(0, 0);
+      });
+      expect(result.current.canUndo).toBe(true);
+      act(() => { result.current.loadProjectData(8, [], [{ name: 'Test', map: [[null]] }], 0); });
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.historyIndex).toBe(1);
+    });
+  });
+
   describe('hover cell', () => {
     it('should set hover cell', () => {
       const { result } = renderHook(() => useLevelDrawing());

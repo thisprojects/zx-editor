@@ -54,6 +54,7 @@ describe('SceneCanvas component', () => {
       backgroundY: 0,
       backgroundScale: 1,
       backgroundAdjustMode: false,
+      onStrokeStart: jest.fn(),
       onSetIsDrawing: jest.fn(),
       onSetPixel: jest.fn(),
       onDrawLine: jest.fn(),
@@ -253,6 +254,7 @@ describe('SceneCanvas component', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30, button: 0 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetIsDrawing).toHaveBeenCalledWith(true);
       expect(props.onSetPixel).toHaveBeenCalled();
     });
@@ -327,6 +329,7 @@ describe('SceneCanvas component', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30, button: 0 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetIsDrawing).toHaveBeenCalledWith(true);
       expect(props.onSetPixel).toHaveBeenCalledWith(10, 10, false);
     });

@@ -5,6 +5,7 @@ import { TileSize, TileData, ScreenData } from '@/types';
 import { CHAR_SIZE, TILE_SIZES } from '@/constants';
 import { getColourHex } from '@/utils/colors';
 import { BsX, BsPlus, BsTrash, BsPencil } from 'react-icons/bs';
+import { UndoRedoButtons } from './UndoRedoButtons';
 
 interface LevelToolbarContentProps {
   tileSize: TileSize;
@@ -24,6 +25,11 @@ interface LevelToolbarContentProps {
   onToggleGrid: () => void;
   pixelSize: number;
   onPixelSizeChange: (size: number) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -142,6 +148,11 @@ export function LevelToolbarContent({
   onToggleGrid,
   pixelSize,
   onPixelSizeChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  historyIndex,
   onLoad,
   onSave,
   onExport,
@@ -342,6 +353,14 @@ export function LevelToolbarContent({
             />
             <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
           </div>
+
+          <UndoRedoButtons
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            historyIndex={historyIndex}
+          />
         </div>
       </div>
 

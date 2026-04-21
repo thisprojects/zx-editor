@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSoftwareSpriteDrawing } from '@/hooks/useSoftwareSpriteDrawing';
 import { useSoftwareSpriteProject } from '@/hooks/useSoftwareSpriteProject';
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { PlayerSpriteToolbarContent } from '@/components/PlayerSpriteToolbarContent';
 import { PlayerSpriteCanvas } from '@/components/PlayerSpriteCanvas';
@@ -17,6 +18,8 @@ export default function PlayerSpriteEditorPage() {
   const [toolbarOpen, setToolbarOpen] = useState(true);
 
   const drawing = useSoftwareSpriteDrawing();
+
+  useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
 
   const project = useSoftwareSpriteProject({
     spriteWidth: drawing.spriteWidth,
@@ -107,6 +110,12 @@ export default function PlayerSpriteEditorPage() {
           // Export options
           exportOptions={project.exportOptions}
           onExportOptionsChange={project.setExportOptions}
+          // History
+          onUndo={drawing.undo}
+          onRedo={drawing.redo}
+          canUndo={drawing.canUndo}
+          canRedo={drawing.canRedo}
+          historyIndex={drawing.historyIndex}
           // Scale
           pixelSize={pixelSize}
           onPixelSizeChange={setPixelSize}
@@ -159,6 +168,7 @@ export default function PlayerSpriteEditorPage() {
           backgroundAdjustMode={drawing.backgroundAdjustMode}
           currentFrameIndex={drawing.currentFrameIndex}
           totalFrames={drawing.frames.length}
+          onStrokeStart={drawing.pushHistory}
           onSetIsDrawing={drawing.setIsDrawing}
           onSetPixel={drawing.setPixel}
           onDrawLine={drawing.drawLine}

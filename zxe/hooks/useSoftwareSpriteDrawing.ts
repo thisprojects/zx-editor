@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useHistory } from './useHistory';
 import { Tool, Attribute, Point, SoftwareSpriteWidth, SoftwareSpriteHeight, SoftwareSpriteFrame } from '@/types';
 import {
   CHAR_SIZE,
@@ -59,8 +60,18 @@ export function useSoftwareSpriteDrawing({
   const canvasWidth = sizeConfig.widthPixels;
   const canvasHeight = sizeConfig.heightPixels;
 
-  // Frame management
-  const [frames, setFrames] = useState<SoftwareSpriteFrame[]>(() => [
+  // Frame management (with history)
+  const {
+    state: frames,
+    setState: setFrames,
+    push: pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
+    clearHistory,
+  } = useHistory<SoftwareSpriteFrame[]>([
     createEmptyFrame(canvasWidth, canvasHeight, widthChars, heightChars, 'Frame 1'),
   ]);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
@@ -374,11 +385,12 @@ export function useSoftwareSpriteDrawing({
       currentInk,
       currentBright
     )]);
+    clearHistory();
     setCurrentFrameIndex(0);
     setLineStart(null);
     setLinePreview(null);
     setIsPlaying(false);
-  }, [currentInk, currentBright]);
+  }, [currentInk, currentBright, setFrames, clearHistory]);
 
   // Toggle animation playback
   const togglePlayback = useCallback(() => {
@@ -403,13 +415,14 @@ export function useSoftwareSpriteDrawing({
     setSpriteWidthState(loadedWidth);
     setSpriteHeightState(loadedHeight);
     setFrames(loadedFrames);
+    clearHistory();
     setCurrentFrameIndex(Math.min(loadedFrameIndex, loadedFrames.length - 1));
     setAnimationFps(loadedFps);
     setLoopAnimation(loadedLoop);
     setLineStart(null);
     setLinePreview(null);
     setIsPlaying(false);
-  }, []);
+  }, [setFrames, clearHistory]);
 
   // Load background image for tracing
   const loadBackgroundImage = useCallback((file: File) => {
@@ -512,5 +525,13 @@ export function useSoftwareSpriteDrawing({
     setBackgroundAdjustMode,
     loadBackgroundImage,
     clearBackgroundImage,
+
+    // History
+    pushHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyIndex,
   };
 }

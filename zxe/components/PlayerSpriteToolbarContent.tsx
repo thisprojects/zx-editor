@@ -6,6 +6,7 @@ import { BsPencilFill, BsEraserFill, BsPaintBucket, BsPlayFill, BsPauseFill, BsS
 import { TbLine, TbHandStop } from 'react-icons/tb';
 import { ColorPicker } from './ColorPicker';
 import { InfoTooltip } from './InfoTooltip';
+import { UndoRedoButtons } from './UndoRedoButtons';
 import { SOFTWARE_SPRITE_SIZES, MAX_ANIMATION_FRAMES } from '@/constants';
 
 interface PlayerSpriteToolbarContentProps {
@@ -63,6 +64,13 @@ interface PlayerSpriteToolbarContentProps {
   exportOptions: SoftwareSpriteExportOptions;
   onExportOptionsChange: (options: SoftwareSpriteExportOptions) => void;
 
+  // History
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
+
   // Scale
   pixelSize: number;
   onPixelSizeChange: (size: number) => void;
@@ -119,6 +127,11 @@ export function PlayerSpriteToolbarContent({
   onClearBackgroundImage,
   exportOptions,
   onExportOptionsChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  historyIndex,
   pixelSize,
   onPixelSizeChange,
   onLoad,
@@ -344,6 +357,14 @@ export function PlayerSpriteToolbarContent({
             />
             <div className="text-xs text-gray-400 text-center mt-1">{pixelSize}x</div>
           </div>
+
+          <UndoRedoButtons
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            historyIndex={historyIndex}
+          />
         </div>
       </div>
 

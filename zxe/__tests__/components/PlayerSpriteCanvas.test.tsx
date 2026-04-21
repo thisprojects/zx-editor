@@ -55,6 +55,7 @@ describe('PlayerSpriteCanvas component', () => {
       backgroundAdjustMode: false,
       currentFrameIndex: 0,
       totalFrames: 1,
+      onStrokeStart: jest.fn(),
       onSetIsDrawing: jest.fn(),
       onSetPixel: jest.fn(),
       onDrawLine: jest.fn(),
@@ -328,6 +329,7 @@ describe('PlayerSpriteCanvas component', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 50, clientY: 50 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetIsDrawing).toHaveBeenCalledWith(true);
       expect(props.onSetPixel).toHaveBeenCalledWith(5, 5, true);
     });
@@ -352,6 +354,7 @@ describe('PlayerSpriteCanvas component', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 50, clientY: 50 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetIsDrawing).toHaveBeenCalledWith(true);
       expect(props.onSetPixel).toHaveBeenCalledWith(5, 5, false);
     });

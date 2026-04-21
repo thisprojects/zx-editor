@@ -21,6 +21,7 @@ describe('TileCanvas', () => {
       lineStart: null,
       linePreview: null,
       isDrawing: false,
+      onStrokeStart: jest.fn(),
       onSetIsDrawing: jest.fn(),
       onSetPixel: jest.fn(),
       onDrawLine: jest.fn(),
@@ -171,6 +172,7 @@ describe('TileCanvas', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetIsDrawing).toHaveBeenCalledWith(true);
       expect(props.onSetPixel).toHaveBeenCalled();
     });
@@ -245,6 +247,7 @@ describe('TileCanvas', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30 });
 
+      expect(props.onStrokeStart).toHaveBeenCalled();
       expect(props.onSetPixel).toHaveBeenCalledWith(2, 2, false);
     });
   });
@@ -388,6 +391,7 @@ describe('TileCanvas', () => {
 
       fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30, button: 0 });
 
+      expect(props.onStrokeStart).not.toHaveBeenCalled();
       expect(props.onSetPixel).not.toHaveBeenCalled();
     });
   });
