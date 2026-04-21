@@ -7,6 +7,7 @@ describe('UndoRedoButtons component', () => {
     onRedo: jest.fn(),
     canUndo: true,
     canRedo: true,
+    historyIndex: 1,
   };
 
   beforeEach(() => {
@@ -31,17 +32,30 @@ describe('UndoRedoButtons component', () => {
       expect(redoButton).toBeInTheDocument();
     });
 
-    it('should render both buttons in a flex container', () => {
+    it('should render prev, index, and next in a centered flex row', () => {
       const { container } = render(<UndoRedoButtons {...defaultProps} />);
-      const buttonContainer = container.querySelector('.flex.gap-1');
-      expect(buttonContainer).toBeInTheDocument();
-      expect(buttonContainer?.children).toHaveLength(2);
+      const row = container.querySelector('.flex.items-center.justify-center.gap-3');
+      expect(row).toBeInTheDocument();
+      expect(row?.children).toHaveLength(3);
     });
 
     it('should have correct styling classes on container', () => {
       const { container } = render(<UndoRedoButtons {...defaultProps} />);
       const outerContainer = container.querySelector('.border.border-gray-600.rounded.p-2.mt-2');
       expect(outerContainer).toBeInTheDocument();
+    });
+
+    it('should display historyIndex as a number', () => {
+      render(<UndoRedoButtons {...defaultProps} historyIndex={5} />);
+      expect(screen.getByText('5')).toBeInTheDocument();
+    });
+
+    it('should update displayed index when prop changes', () => {
+      const { rerender } = render(<UndoRedoButtons {...defaultProps} historyIndex={1} />);
+      expect(screen.getByText('1')).toBeInTheDocument();
+
+      rerender(<UndoRedoButtons {...defaultProps} historyIndex={7} />);
+      expect(screen.getByText('7')).toBeInTheDocument();
     });
   });
 

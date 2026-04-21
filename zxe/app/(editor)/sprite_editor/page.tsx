@@ -87,6 +87,7 @@ export default function SpriteEditorPage() {
           onRedo={drawing.redo}
           canUndo={drawing.canUndo}
           canRedo={drawing.canRedo}
+          historyIndex={drawing.historyIndex}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}

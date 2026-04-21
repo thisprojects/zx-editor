@@ -28,6 +28,7 @@ export function useDrawing({
     redo,
     canUndo,
     canRedo,
+    historyIndex,
     clearHistory,
   } = useHistory<DrawingState>({
     pixels: createEmptyPixels(initialCharsWidth * CHAR_SIZE, initialCharsHeight * CHAR_SIZE),
@@ -274,6 +275,7 @@ export function useDrawing({
     redo,
     canUndo,
     canRedo,
+    historyIndex,
 
     // Background image (editor-only)
     backgroundImage,

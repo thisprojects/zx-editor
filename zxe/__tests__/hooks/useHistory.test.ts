@@ -22,6 +22,12 @@ describe('useHistory hook', () => {
       expect(result.current.canRedo).toBe(false);
     });
 
+    it('should initialize historyIndex at 1', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      expect(result.current.historyIndex).toBe(1);
+    });
+
     it('should accept complex state objects', () => {
       const initialState = {
         pixels: [[true, false], [false, true]],
@@ -562,6 +568,100 @@ describe('useHistory hook', () => {
         result.current.undo();
       });
       expect(result.current.state).toEqual({ count: 4 });
+    });
+  });
+
+  describe('historyIndex', () => {
+    it('should be 1 at initial state', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should increment to 2 after first push', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      act(() => { result.current.setState({ value: 1 }); });
+      act(() => { result.current.push(); });
+
+      expect(result.current.historyIndex).toBe(2);
+    });
+
+    it('should increment with each push', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      for (let i = 1; i <= 4; i++) {
+        act(() => { result.current.setState({ value: i }); });
+        act(() => { result.current.push(); });
+        expect(result.current.historyIndex).toBe(i + 1);
+      }
+    });
+
+    it('should decrement by 1 when undoing', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      act(() => { result.current.setState({ value: 1 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.setState({ value: 2 }); });
+      act(() => { result.current.push(); });
+
+      expect(result.current.historyIndex).toBe(3);
+
+      act(() => { result.current.undo(); });
+      expect(result.current.historyIndex).toBe(2);
+
+      act(() => { result.current.undo(); });
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should increment by 1 when redoing', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      act(() => { result.current.setState({ value: 1 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.setState({ value: 2 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.undo(); });
+      act(() => { result.current.undo(); });
+
+      expect(result.current.historyIndex).toBe(1);
+
+      act(() => { result.current.redo(); });
+      expect(result.current.historyIndex).toBe(2);
+
+      act(() => { result.current.redo(); });
+      expect(result.current.historyIndex).toBe(3);
+    });
+
+    it('should reset to 1 after clearHistory', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      act(() => { result.current.setState({ value: 1 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.setState({ value: 2 }); });
+      act(() => { result.current.push(); });
+
+      expect(result.current.historyIndex).toBe(3);
+
+      act(() => { result.current.clearHistory(); });
+
+      expect(result.current.historyIndex).toBe(1);
+    });
+
+    it('should reset future and update index when push follows undo', () => {
+      const { result } = renderHook(() => useHistory({ value: 0 }));
+
+      act(() => { result.current.setState({ value: 1 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.setState({ value: 2 }); });
+      act(() => { result.current.push(); });
+      act(() => { result.current.undo(); });
+
+      expect(result.current.historyIndex).toBe(2);
+
+      act(() => { result.current.setState({ value: 3 }); });
+      act(() => { result.current.push(); });
+
+      expect(result.current.historyIndex).toBe(3);
     });
   });
 

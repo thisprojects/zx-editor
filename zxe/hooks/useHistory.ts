@@ -11,6 +11,7 @@ interface UseHistoryReturn<T> {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  historyIndex: number;
   clearHistory: () => void;
   push: () => void;
 }
@@ -30,6 +31,7 @@ export function useHistory<T>(
   const [state, _setState] = useState<T>(initialState);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [historyIndex, setHistoryIndex] = useState(1);
 
   const past = useRef<T[]>([]);
   const future = useRef<T[]>([]);
@@ -37,6 +39,7 @@ export function useHistory<T>(
   const updateFlags = useCallback(() => {
     setCanUndo(past.current.length > 0);
     setCanRedo(future.current.length > 0);
+    setHistoryIndex(past.current.length + 1);
   }, []);
 
   const setState = useCallback((value: T | ((prev: T) => T)) => {
@@ -89,6 +92,7 @@ export function useHistory<T>(
     redo,
     canUndo,
     canRedo,
+    historyIndex,
     clearHistory,
     push,
   };
