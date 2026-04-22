@@ -37,10 +37,14 @@ jest.mock('@/hooks/useSceneDrawing', () => ({
 jest.mock('@/hooks/useSceneProject', () => ({
   useSceneProject: () => ({
     projectInputRef: { current: null },
+    scrInputRef: { current: null },
     saveProject: jest.fn(),
     exportASM: jest.fn(),
+    saveSCR: jest.fn(),
     loadProject: jest.fn(),
+    loadSCR: jest.fn(),
     triggerLoadDialog: jest.fn(),
+    triggerLoadSCRDialog: jest.fn(),
   }),
 }));
 
@@ -91,6 +95,8 @@ describe('Scene Editor page', () => {
       expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Export ASM' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load SCR' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Export SCR' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
     });
 
@@ -100,11 +106,18 @@ describe('Scene Editor page', () => {
       expect(screen.getByTitle('Toggle grid')).toBeInTheDocument();
     });
 
-    it('should render the file input (hidden)', () => {
+    it('should render the JSON file input (hidden)', () => {
       render(<SceneEditorPage />);
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toBeInTheDocument();
-      expect(fileInput).toHaveClass('hidden');
+      const jsonInput = document.querySelector('input[type="file"][accept=".json"]');
+      expect(jsonInput).toBeInTheDocument();
+      expect(jsonInput).toHaveClass('hidden');
+    });
+
+    it('should render the SCR file input (hidden)', () => {
+      render(<SceneEditorPage />);
+      const scrInput = document.querySelector('input[type="file"][accept=".scr"]');
+      expect(scrInput).toBeInTheDocument();
+      expect(scrInput).toHaveClass('hidden');
     });
   });
 
@@ -164,6 +177,33 @@ describe('Scene Editor page', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByText('Save Project')).not.toBeInTheDocument();
+    });
+
+    it('should open export SCR modal when Export SCR is clicked', () => {
+      render(<SceneEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
+      expect(screen.getByRole('heading', { name: 'Export SCR' })).toBeInTheDocument();
+    });
+
+    it('should show .scr extension in Export SCR modal', () => {
+      render(<SceneEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
+      expect(screen.getByText('.scr')).toBeInTheDocument();
+    });
+
+    it('should close Export SCR modal when Cancel is clicked', () => {
+      render(<SceneEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
+      expect(screen.getByRole('heading', { name: 'Export SCR' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('heading', { name: 'Export SCR' })).not.toBeInTheDocument();
+    });
+
+    it('should not show multiple modals open at once', () => {
+      render(<SceneEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
+      expect(screen.getAllByRole('heading').filter(h => h.tagName === 'H2')).toHaveLength(1);
     });
   });
 

@@ -125,6 +125,41 @@ describe('FileNameModal component', () => {
     });
   });
 
+  describe('exportScr mode', () => {
+    it('should show "Export SCR" title when action is exportScr', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      expect(screen.getByText('Export SCR')).toBeInTheDocument();
+    });
+
+    it('should show .scr extension when action is exportScr', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      expect(screen.getByText('.scr')).toBeInTheDocument();
+    });
+
+    it('should show "Export" button when action is exportScr', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    });
+
+    it('should call onConfirm when Export button clicked', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      expect(defaultProps.onConfirm).toHaveBeenCalled();
+    });
+
+    it('should call onConfirm when Enter pressed in exportScr mode', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+      expect(defaultProps.onConfirm).toHaveBeenCalled();
+    });
+
+    it('should not show .json or .asm extension when action is exportScr', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" />);
+      expect(screen.queryByText('.json')).not.toBeInTheDocument();
+      expect(screen.queryByText('.asm')).not.toBeInTheDocument();
+    });
+  });
+
   describe('null action', () => {
     it('should handle null action gracefully', () => {
       render(<FileNameModal {...defaultProps} action={null} />);

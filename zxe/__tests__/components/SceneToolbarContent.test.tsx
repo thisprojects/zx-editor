@@ -42,6 +42,8 @@ describe('SceneToolbarContent', () => {
     onLoad: jest.fn(),
     onSave: jest.fn(),
     onExport: jest.fn(),
+    onLoadSCR: jest.fn(),
+    onExportSCR: jest.fn(),
     onClear: jest.fn(),
   });
 
@@ -246,6 +248,24 @@ describe('SceneToolbarContent', () => {
       expect(props.onExport).toHaveBeenCalled();
     });
 
+    it('should call onLoadSCR when Load SCR clicked', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<SceneToolbarContent {...props} />);
+
+      fireEvent.click(screen.getByText('Load SCR'));
+
+      expect(props.onLoadSCR).toHaveBeenCalled();
+    });
+
+    it('should call onExportSCR when Export SCR clicked', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<SceneToolbarContent {...props} />);
+
+      fireEvent.click(screen.getByText('Export SCR'));
+
+      expect(props.onExportSCR).toHaveBeenCalled();
+    });
+
     it('should call onClear when Clear clicked', () => {
       const props = createDefaultProps();
       renderWithProvider(<SceneToolbarContent {...props} />);
@@ -253,6 +273,18 @@ describe('SceneToolbarContent', () => {
       fireEvent.click(screen.getByText('Clear'));
 
       expect(props.onClear).toHaveBeenCalled();
+    });
+
+    it('should render all file operation buttons', () => {
+      const props = createDefaultProps();
+      renderWithProvider(<SceneToolbarContent {...props} />);
+
+      expect(screen.getByText('Load')).toBeInTheDocument();
+      expect(screen.getByText('Save')).toBeInTheDocument();
+      expect(screen.getByText('Export ASM')).toBeInTheDocument();
+      expect(screen.getByText('Load SCR')).toBeInTheDocument();
+      expect(screen.getByText('Export SCR')).toBeInTheDocument();
+      expect(screen.getByText('Clear')).toBeInTheDocument();
     });
   });
 

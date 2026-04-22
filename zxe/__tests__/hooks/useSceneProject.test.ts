@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useSceneProject } from '@/hooks/useSceneProject';
 import { Attribute } from '@/types';
-import { SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, CHAR_SIZE } from '@/constants';
+import { SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, CHAR_SIZE, SCREEN_TOTAL_SIZE } from '@/constants';
 
 describe('useSceneProject hook', () => {
   const createMockProps = () => {
@@ -408,6 +408,177 @@ describe('useSceneProject hook', () => {
       });
 
       expect(mockInput.value).toBe('');
+    });
+  });
+
+  describe('saveSCR', () => {
+    it('should create and download a .scr binary file', () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      act(() => {
+        result.current.saveSCR();
+      });
+
+      expect(mockClick).toHaveBeenCalled();
+      expect(URL.createObjectURL).toHaveBeenCalled();
+      expect(URL.revokeObjectURL).toHaveBeenCalled();
+    });
+
+    it('should use provided fileName with .scr extension', () => {
+      const props = createMockProps();
+      props.fileName = 'loading';
+      const { result } = renderHook(() => useSceneProject(props));
+
+      let downloadAttribute = '';
+      jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        const element = originalCreateElement(tagName);
+        if (tagName === 'a') {
+          element.click = mockClick;
+          Object.defineProperty(element, 'download', {
+            set(value) { downloadAttribute = value; },
+            get() { return downloadAttribute; },
+          });
+        }
+        return element;
+      });
+
+      act(() => {
+        result.current.saveSCR();
+      });
+
+      expect(downloadAttribute).toBe('loading.scr');
+    });
+  });
+
+  describe('loadSCR', () => {
+    it('should reject files that are not 6912 bytes', () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      const mockFile = Object.defineProperty(
+        new File([new Uint8Array(100)], 'test.scr'),
+        'size',
+        { value: 100 }
+      );
+
+      const event = {
+        target: { files: [mockFile] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        result.current.loadSCR(event);
+      });
+
+      expect(global.alert).toHaveBeenCalledWith(
+        expect.stringContaining(`Expected ${SCREEN_TOTAL_SIZE} bytes`)
+      );
+      expect(props.loadProjectData).not.toHaveBeenCalled();
+    });
+
+    it('should load valid .scr file and call loadProjectData', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      const scrData = new Uint8Array(SCREEN_TOTAL_SIZE);
+      const mockFile = new File([scrData], 'scene.scr');
+
+      const mockFileReader = {
+        readAsArrayBuffer: jest.fn(),
+        onload: null as ((event: ProgressEvent<FileReader>) => void) | null,
+      };
+
+      jest.spyOn(global, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader);
+
+      const event = {
+        target: { files: [mockFile] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        result.current.loadSCR(event);
+      });
+
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({
+            target: { result: scrData.buffer },
+          } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(props.loadProjectData).toHaveBeenCalledWith(
+        SCREEN_CHARS_WIDTH,
+        SCREEN_CHARS_HEIGHT,
+        expect.any(Array),
+        expect.any(Array)
+      );
+    });
+
+    it('should strip .scr extension from filename', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      const scrData = new Uint8Array(SCREEN_TOTAL_SIZE);
+      const mockFile = new File([scrData], 'loading_screen.scr');
+
+      const mockFileReader = {
+        readAsArrayBuffer: jest.fn(),
+        onload: null as ((event: ProgressEvent<FileReader>) => void) | null,
+      };
+
+      jest.spyOn(global, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader);
+
+      const event = {
+        target: { files: [mockFile] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        result.current.loadSCR(event);
+      });
+
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({
+            target: { result: scrData.buffer },
+          } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(props.setFileName).toHaveBeenCalledWith('loading_screen');
+    });
+
+    it('should not load when no file selected', () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      const event = {
+        target: { files: null },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        result.current.loadSCR(event);
+      });
+
+      expect(props.loadProjectData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('triggerLoadSCRDialog', () => {
+    it('should click the scr input ref when called', () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSceneProject(props));
+
+      const mockInput = { click: jest.fn(), value: '' };
+      Object.defineProperty(result.current.scrInputRef, 'current', {
+        value: mockInput,
+        writable: true,
+      });
+
+      act(() => {
+        result.current.triggerLoadSCRDialog();
+      });
+
+      expect(mockInput.click).toHaveBeenCalled();
     });
   });
 

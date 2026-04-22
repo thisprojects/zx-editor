@@ -2,8 +2,8 @@
 
 import { useRef, useCallback } from 'react';
 import { Attribute } from '@/types';
-import { SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT } from '@/constants';
-import { exportScreenASM } from '@/utils/export';
+import { SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, SCREEN_TOTAL_SIZE } from '@/constants';
+import { exportScreenASM, encodeSCR, decodeSCR } from '@/utils/export';
 
 interface SceneProjectData {
   version: number;
@@ -35,6 +35,7 @@ export function useSceneProject({
   loadProjectData,
 }: UseSceneProjectProps) {
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const scrInputRef = useRef<HTMLInputElement>(null);
 
   // Save project as JSON
   const saveProject = useCallback(() => {
@@ -119,11 +120,63 @@ export function useSceneProject({
     projectInputRef.current?.click();
   }, []);
 
+  // Save as .scr binary
+  const saveSCR = useCallback(() => {
+    const data = encodeSCR({ pixels, attributes });
+    const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName}.scr`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [pixels, attributes, fileName]);
+
+  // Load from .scr binary file
+  const loadSCR = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (file.size !== SCREEN_TOTAL_SIZE) {
+        alert(`Invalid .scr file. Expected ${SCREEN_TOTAL_SIZE} bytes, got ${file.size}.`);
+        if (scrInputRef.current) scrInputRef.current.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          const { pixels: newPixels, attributes: newAttributes } = decodeSCR(new Uint8Array(buffer));
+          loadProjectData(SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, newPixels, newAttributes);
+          const baseName = file.name.replace(/\.scr$/i, '');
+          setFileName(baseName);
+        } catch {
+          alert('Failed to load .scr file. Please check the file format.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+
+      if (scrInputRef.current) scrInputRef.current.value = '';
+    },
+    [loadProjectData, setFileName]
+  );
+
+  // Trigger SCR file dialog
+  const triggerLoadSCRDialog = useCallback(() => {
+    scrInputRef.current?.click();
+  }, []);
+
   return {
     projectInputRef,
+    scrInputRef,
     saveProject,
     exportASM,
+    saveSCR,
     loadProject,
+    loadSCR,
     triggerLoadDialog,
+    triggerLoadSCRDialog,
   };
 }

@@ -1,4 +1,4 @@
-import { exportASM } from '@/utils/export';
+import { exportASM, encodeSCR, decodeSCR } from '@/utils/export';
 import { Attribute, DrawBounds } from '@/types';
 
 describe('export utility', () => {
@@ -208,6 +208,138 @@ describe('export utility', () => {
       exportASM({ pixels, attributes, bounds, fileName: 'my_sprite' });
 
       expect(mockAnchor.download).toBe('my_sprite.asm');
+    });
+  });
+
+  describe('encodeSCR', () => {
+    const makeEmptyPixels = () =>
+      Array.from({ length: 192 }, () => Array(256).fill(false)) as boolean[][];
+    const makeEmptyAttributes = () =>
+      Array.from({ length: 24 }, () =>
+        Array.from({ length: 32 }, () => ({ ink: 7, paper: 0, bright: false }))
+      ) as Attribute[][];
+
+    it('should produce exactly 6912 bytes', () => {
+      const data = encodeSCR({ pixels: makeEmptyPixels(), attributes: makeEmptyAttributes() });
+      expect(data.length).toBe(6912);
+    });
+
+    it('should produce all zeros for blank canvas', () => {
+      const attrs = Array.from({ length: 24 }, () =>
+        Array.from({ length: 32 }, () => ({ ink: 0, paper: 0, bright: false }))
+      ) as Attribute[][];
+      const data = encodeSCR({ pixels: makeEmptyPixels(), attributes: attrs });
+      expect(data.every((b) => b === 0)).toBe(true);
+    });
+
+    it('should encode pixel (0,0) as bit 7 of byte 0', () => {
+      const pixels = makeEmptyPixels();
+      pixels[0][0] = true;
+      const data = encodeSCR({ pixels, attributes: makeEmptyAttributes() });
+      expect(data[0]).toBe(0x80);
+    });
+
+    it('should encode pixel (0,7) as bit 0 of byte 0', () => {
+      const pixels = makeEmptyPixels();
+      pixels[0][7] = true;
+      const data = encodeSCR({ pixels, attributes: makeEmptyAttributes() });
+      expect(data[0]).toBe(0x01);
+    });
+
+    it('should encode pixel (1,0) in scan-line interleaved position', () => {
+      // y=1: offset = (0<<11)|(1<<8)|(0<<5)|0 = 256
+      const pixels = makeEmptyPixels();
+      pixels[1][0] = true;
+      const data = encodeSCR({ pixels, attributes: makeEmptyAttributes() });
+      expect(data[256]).toBe(0x80);
+    });
+
+    it('should encode second character row (y=8) at byte offset 32', () => {
+      // y=8: offset = (0<<11)|(0<<8)|(1<<5)|0 = 32
+      const pixels = makeEmptyPixels();
+      pixels[8][0] = true;
+      const data = encodeSCR({ pixels, attributes: makeEmptyAttributes() });
+      expect(data[32]).toBe(0x80);
+    });
+
+    it('should encode second third (y=64) at byte offset 2048', () => {
+      const pixels = makeEmptyPixels();
+      pixels[64][0] = true;
+      const data = encodeSCR({ pixels, attributes: makeEmptyAttributes() });
+      expect(data[2048]).toBe(0x80);
+    });
+
+    it('should encode attribute ink/paper/bright correctly', () => {
+      // ink=3, paper=5, bright=true → 0x40 | (5<<3) | 3 = 0x6B
+      const attrs = makeEmptyAttributes();
+      attrs[0][0] = { ink: 3, paper: 5, bright: true };
+      const data = encodeSCR({ pixels: makeEmptyPixels(), attributes: attrs });
+      expect(data[6144]).toBe(0x6B);
+    });
+
+    it('should store attributes linearly from offset 6144', () => {
+      const attrs = makeEmptyAttributes();
+      attrs[0][1] = { ink: 1, paper: 0, bright: false }; // second cell of first row
+      const data = encodeSCR({ pixels: makeEmptyPixels(), attributes: attrs });
+      expect(data[6145]).toBe(0x01);
+    });
+  });
+
+  describe('decodeSCR', () => {
+    it('should decode all-zero data to blank canvas', () => {
+      const data = new Uint8Array(6912);
+      const { pixels, attributes } = decodeSCR(data);
+      expect(pixels.every((row) => row.every((p) => p === false))).toBe(true);
+      expect(attributes.every((row) => row.every((a) => a.ink === 0 && a.paper === 0 && !a.bright))).toBe(true);
+    });
+
+    it('should decode pixel at (0,0) from bit 7 of byte 0', () => {
+      const data = new Uint8Array(6912);
+      data[0] = 0x80;
+      const { pixels } = decodeSCR(data);
+      expect(pixels[0][0]).toBe(true);
+      expect(pixels[0][1]).toBe(false);
+    });
+
+    it('should decode pixel at (1,0) from scan-line interleaved offset 256', () => {
+      const data = new Uint8Array(6912);
+      data[256] = 0x80;
+      const { pixels } = decodeSCR(data);
+      expect(pixels[1][0]).toBe(true);
+    });
+
+    it('should decode attribute at (0,0) from offset 6144', () => {
+      const data = new Uint8Array(6912);
+      data[6144] = 0x6B; // bright=1, paper=5, ink=3
+      const { attributes } = decodeSCR(data);
+      expect(attributes[0][0]).toEqual({ ink: 3, paper: 5, bright: true });
+    });
+
+    it('should roundtrip through encodeSCR and decodeSCR', () => {
+      const pixels = Array.from({ length: 192 }, (_, y) =>
+        Array.from({ length: 256 }, (_, x) => (x + y) % 3 === 0)
+      ) as boolean[][];
+      const attributes = Array.from({ length: 24 }, (_, cy) =>
+        Array.from({ length: 32 }, (_, cx) => ({
+          ink: (cx + cy) % 8,
+          paper: (cx * cy) % 8,
+          bright: (cx + cy) % 2 === 0,
+        }))
+      ) as Attribute[][];
+
+      const encoded = encodeSCR({ pixels, attributes });
+      const { pixels: decodedPixels, attributes: decodedAttrs } = decodeSCR(encoded);
+
+      for (let y = 0; y < 192; y++) {
+        for (let x = 0; x < 256; x++) {
+          expect(decodedPixels[y][x]).toBe(pixels[y][x]);
+        }
+      }
+      for (let cy = 0; cy < 24; cy++) {
+        for (let cx = 0; cx < 32; cx++) {
+          expect(decodedAttrs[cy][cx]).toEqual(attributes[cy][cx]);
+        }
+      }
     });
   });
 });

@@ -2,7 +2,7 @@
 
 interface FileNameModalProps {
   isOpen: boolean;
-  action: 'save' | 'export' | null;
+  action: 'save' | 'export' | 'exportScr' | null;
   fileName: string;
   onFileNameChange: (name: string) => void;
   onConfirm: () => void;
@@ -23,7 +23,7 @@ export function FileNameModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-6 w-80 shadow-xl">
         <h2 className="text-xl font-bold mb-4">
-          {action === 'save' ? 'Save Project' : 'Export ASM'}
+          {action === 'save' ? 'Save Project' : action === 'exportScr' ? 'Export SCR' : 'Export ASM'}
         </h2>
         <div className="mb-4">
           <label className="block text-sm text-gray-400 mb-2">Filename</label>
@@ -40,7 +40,7 @@ export function FileNameModal({
               className="flex-1 px-3 py-2 rounded-l bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
             />
             <span className="px-3 py-2 bg-gray-600 text-gray-300 rounded-r border border-l-0 border-gray-600">
-              {action === 'save' ? '.json' : '.asm'}
+              {action === 'save' ? '.json' : action === 'exportScr' ? '.scr' : '.asm'}
             </span>
           </div>
         </div>

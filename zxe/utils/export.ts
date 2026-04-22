@@ -1,5 +1,71 @@
 import { Attribute, DrawBounds, TileSize, TileData, ScreenData, SoftwareSpriteFrame, SoftwareSpriteWidth, SoftwareSpriteHeight, SoftwareSpriteExportOptions } from '@/types';
-import { CHAR_SIZE, MAX_UDG_CHARS, SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, TILE_SIZES } from '@/constants';
+import { CHAR_SIZE, MAX_UDG_CHARS, SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, SCREEN_DISPLAY_SIZE, SCREEN_TOTAL_SIZE, TILE_SIZES } from '@/constants';
+
+interface SCRParams {
+  pixels: boolean[][];
+  attributes: Attribute[][];
+}
+
+// Encode pixels and attributes to ZX Spectrum .scr binary format (6912 bytes).
+// The pixel section uses the Spectrum's non-linear screen layout where scan lines
+// are interleaved by thirds: offset = (third<<11)|(scanLine<<8)|(charRow<<5)|byteCol
+export function encodeSCR({ pixels, attributes }: SCRParams): Uint8Array {
+  const data = new Uint8Array(SCREEN_TOTAL_SIZE);
+
+  for (let y = 0; y < 192; y++) {
+    const offset = ((y >> 6) << 11) | ((y & 7) << 8) | (((y >> 3) & 7) << 5);
+    for (let x = 0; x < 32; x++) {
+      let byte = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        if (pixels[y]?.[x * 8 + bit]) {
+          byte |= 1 << (7 - bit);
+        }
+      }
+      data[offset | x] = byte;
+    }
+  }
+
+  for (let charY = 0; charY < 24; charY++) {
+    for (let charX = 0; charX < 32; charX++) {
+      const attr = attributes[charY]?.[charX] || { ink: 7, paper: 0, bright: false };
+      data[SCREEN_DISPLAY_SIZE + charY * 32 + charX] =
+        (attr.bright ? 0x40 : 0) | (attr.paper << 3) | attr.ink;
+    }
+  }
+
+  return data;
+}
+
+// Decode ZX Spectrum .scr binary data (6912 bytes) back to pixels and attributes.
+export function decodeSCR(data: Uint8Array): { pixels: boolean[][], attributes: Attribute[][] } {
+  const pixels: boolean[][] = Array.from({ length: 192 }, () => Array(256).fill(false));
+  const attributes: Attribute[][] = Array.from({ length: 24 }, () =>
+    Array.from({ length: 32 }, () => ({ ink: 7, paper: 0, bright: false }))
+  );
+
+  for (let y = 0; y < 192; y++) {
+    const offset = ((y >> 6) << 11) | ((y & 7) << 8) | (((y >> 3) & 7) << 5);
+    for (let x = 0; x < 32; x++) {
+      const byte = data[offset | x];
+      for (let bit = 0; bit < 8; bit++) {
+        pixels[y][x * 8 + bit] = (byte & (1 << (7 - bit))) !== 0;
+      }
+    }
+  }
+
+  for (let charY = 0; charY < 24; charY++) {
+    for (let charX = 0; charX < 32; charX++) {
+      const byte = data[SCREEN_DISPLAY_SIZE + charY * 32 + charX];
+      attributes[charY][charX] = {
+        ink: byte & 0x07,
+        paper: (byte >> 3) & 0x07,
+        bright: (byte & 0x40) !== 0,
+      };
+    }
+  }
+
+  return { pixels, attributes };
+}
 
 interface ExportParams {
   pixels: boolean[][];

@@ -39,6 +39,8 @@ interface SceneToolbarContentProps {
   onLoad: () => void;
   onSave: () => void;
   onExport: () => void;
+  onLoadSCR: () => void;
+  onExportSCR: () => void;
   onClear: () => void;
 }
 
@@ -72,6 +74,8 @@ export function SceneToolbarContent({
   onLoad,
   onSave,
   onExport,
+  onLoadSCR,
+  onExportSCR,
   onClear,
 }: SceneToolbarContentProps) {
   const backgroundInputRef = useRef<HTMLInputElement>(null);
@@ -402,6 +406,18 @@ export function SceneToolbarContent({
             className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
           >
             Export ASM
+          </button>
+          <button
+            onClick={onLoadSCR}
+            className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 text-xs"
+          >
+            Load SCR
+          </button>
+          <button
+            onClick={onExportSCR}
+            className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
+          >
+            Export SCR
           </button>
           <button
             onClick={onClear}

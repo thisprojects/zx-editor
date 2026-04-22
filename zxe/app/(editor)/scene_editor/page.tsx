@@ -13,7 +13,7 @@ import { DEFAULT_SCREEN_PIXEL_SIZE } from '@/constants';
 export default function SceneEditorPage() {
   const [fileName, setFileName] = useState('screen');
   const [showModal, setShowModal] = useState(false);
-  const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
+  const [modalAction, setModalAction] = useState<'save' | 'export' | 'exportScr' | null>(null);
   const [pixelSize, setPixelSize] = useState(DEFAULT_SCREEN_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
@@ -30,7 +30,7 @@ export default function SceneEditorPage() {
     loadProjectData: drawing.loadProjectData,
   });
 
-  const openSaveModal = (action: 'save' | 'export') => {
+  const openSaveModal = (action: 'save' | 'export' | 'exportScr') => {
     setModalAction(action);
     setShowModal(true);
   };
@@ -40,6 +40,8 @@ export default function SceneEditorPage() {
       project.saveProject();
     } else if (modalAction === 'export') {
       project.exportASM();
+    } else if (modalAction === 'exportScr') {
+      project.saveSCR();
     }
     setShowModal(false);
     setModalAction(null);
@@ -89,16 +91,25 @@ export default function SceneEditorPage() {
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
           onExport={() => openSaveModal('export')}
+          onLoadSCR={project.triggerLoadSCRDialog}
+          onExportSCR={() => openSaveModal('exportScr')}
           onClear={drawing.clearCanvas}
         />
       </EditorToolbar>
 
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         ref={project.projectInputRef}
         type="file"
         accept=".json"
         onChange={project.loadProject}
+        className="hidden"
+      />
+      <input
+        ref={project.scrInputRef}
+        type="file"
+        accept=".scr"
+        onChange={project.loadSCR}
         className="hidden"
       />
 
