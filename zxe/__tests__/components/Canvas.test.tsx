@@ -559,6 +559,44 @@ describe('Canvas component', () => {
       // Dimensions: 560 * 1.5 = 840, 240 * 1.5 = 360
       expect(mockDrawImage).toHaveBeenCalledWith(mockImage, 20, 30, 840, 360);
     });
+
+    it('should not draw paper pixels with default paper colour when background image is loaded', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      // All attributes keep default paper: 0 (black), all pixels are false (paper only)
+
+      const fillStyles: string[] = [];
+      mockFillRect.mockImplementation(() => {
+        fillStyles.push(mockContext.fillStyle);
+      });
+
+      render(<Canvas {...props} />);
+
+      // Default black paper lets the tracing image show through — not drawn
+      expect(fillStyles).not.toContain('#000000');
+    });
+
+    it('should draw paper pixels with non-default paper colour when background image is loaded', () => {
+      const props = createDefaultProps();
+      const mockImage = new Image();
+      props.backgroundImage = mockImage;
+      props.backgroundEnabled = true;
+      // Simulate a bucket fill: first character cell gets bright blue paper
+      props.attributes[0][0] = { ink: 7, paper: 1, bright: true };
+      // All pixels remain false so we test paper-pixel rendering exclusively
+
+      const fillStyles: string[] = [];
+      mockFillRect.mockImplementation(() => {
+        fillStyles.push(mockContext.fillStyle);
+      });
+
+      render(<Canvas {...props} />);
+
+      // Filled cell should render its 8×8 paper pixels in bright blue (#0000FF)
+      expect(fillStyles).toContain('#0000FF');
+    });
   });
 
   describe('pan tool', () => {

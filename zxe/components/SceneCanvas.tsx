@@ -296,9 +296,10 @@ export function SceneCanvas({
             const pixelY = charY * CHAR_SIZE + py;
             const isInk = pixels[pixelY]?.[pixelX] || false;
 
-            // Skip drawing paper pixels when background image is visible
-            // so the trace image shows through empty areas
-            if (!isInk && backgroundImage && backgroundEnabled) {
+            // Skip drawing paper pixels when background image is visible,
+            // so the trace image shows through — but only for default (black) paper.
+            // Explicitly filled paper colours are always drawn.
+            if (!isInk && backgroundImage && backgroundEnabled && attr.paper === 0) {
               continue;
             }
 
