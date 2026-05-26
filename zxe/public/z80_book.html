@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>An Introduction to Z80 Assembly Language: A Guide for High-Level Programmers</title>
+<title>An Introduction to Z80 Assembly Language: A Guide for Modern Programmers</title>
 <style>
 :root {
     --bg: #1a1a2e;
@@ -128,6 +128,7 @@ tr.highlight-row {
 <li><a href="#introduction">Introduction</a></li>
 <li><a href="#debug-output-routines">Debug Output Routines</a></li>
 <ul>
+<li><a href="#setting-up-editor">Setting Up Your Editor</a></li>
 <li><a href="#debug-init">debug_init</a></li>
 <li><a href="#debug-print-char">print_char</a></li>
 <li><a href="#debug-print-string">print_string</a></li>
@@ -259,6 +260,37 @@ tr.highlight-row {
 <p>The routines use the ZX Spectrum ROM, so they work immediately with Pasmo&#x27;s --tapbas flag. Save the code below as debug_output.asm and include it in your programs with INCLUDE &quot;debug_output.asm&quot;, or paste it directly at the end of your source files.</p>
 <p>Don&#x27;t worry if some of the assembly instructions below are unfamiliar — they are all explained in detail in the chapters that follow. For now, the important thing is understanding what each routine does and how to call it.</p>
 
+<h2 id="setting-up-editor">Setting Up Your Editor</h2>
+<p>Before you write your first line of assembly, it helps to have an editor that understands Z80 syntax. <a href="https://code.visualstudio.com/" target="_blank">Visual Studio Code</a> is a free, cross-platform editor that works well for this guide. Download and install it from <code>https://code.visualstudio.com/</code> for Windows, macOS, or Linux.</p>
+<p>Once VS Code is installed, add the <strong>Z80 Assembly</strong> extension by <strong>Imanolea</strong>. It provides syntax highlighting for <code>.asm</code> files — coloured keywords, register names, directives, and comments — making your source code much easier to read and navigate.</p>
+<p>To install it:</p>
+<ol>
+<li>Open VS Code and press <kbd>Ctrl+Shift+X</kbd> (Windows/Linux) or <kbd>Cmd+Shift+X</kbd> (macOS) to open the Extensions panel.</li>
+<li>Search for <strong>Z80 Assembly</strong>.</li>
+<li>Select the extension published by <strong>Imanolea</strong> and click <strong>Install</strong>.</li>
+</ol>
+<p>Alternatively, install it from the command line:</p>
+<pre><code>code --install-extension imanolea.z80-asm</code></pre>
+<p>With the extension active, <code>.asm</code> files will have coloured keywords, register names, and comments.</p>
+
+<h3>Assembling with Pasmo</h3>
+<p>Every example in this guide is assembled using Pasmo with the <code>--tapbas</code> flag. This flag wraps your machine code in a TAP file with an auto-running BASIC loader, so the Spectrum loads and starts your program immediately when the tape is played. Without it you would have to type <code>RANDOMIZE USR 32768</code> manually every time.</p>
+<p>The general form of the command is:</p>
+<pre><code>pasmo --tapbas program.asm program.tap</code></pre>
+<p>For example, to assemble a file called <code>hello.asm</code>:</p>
+<pre><code>pasmo --tapbas hello.asm hello.tap</code></pre>
+<p>If Pasmo finds an error it will print the offending line number and a short message. Fix the error and re-run the command. When assembly succeeds with no output, your <code>.tap</code> file is ready.</p>
+
+<h3>Running with Fuse</h3>
+<p>Fuse is a cycle-accurate ZX Spectrum emulator. Once you have a <code>.tap</code> file, pass it directly to Fuse on the command line and it will auto-load the tape:</p>
+<pre><code>fuse --tape program.tap --auto-load</code></pre>
+<p>So for the example above:</p>
+<pre><code>fuse --tape hello.tap --auto-load</code></pre>
+<p>Fuse opens, plays the tape, the BASIC loader runs, and your program starts. The output from your debug routines appears on the emulated screen. Close the Fuse window when you are done, edit your source file, re-assemble with Pasmo, and run again.</p>
+<p>Your typical edit–assemble–run cycle from the terminal therefore looks like this (on Linux / Mac systems):</p>
+<pre><code>pasmo --tapbas hello.asm hello.tap &amp;&amp; fuse --tape hello.tap --auto-load</code></pre>
+<p>Chaining the commands with <code>&amp;&amp;</code> means Fuse only launches if Pasmo succeeds — a failed assembly stops the chain before the emulator opens.</p>
+
 <h2 id="debug-init">debug_init</h2>
 <p>The ZX Spectrum can send output to different destinations — the main screen, the lower screen (where INPUT prompts appear), or a printer. The Spectrum calls these &#x27;channels&#x27; and numbers them: channel 1 is the lower screen, channel 2 is the main screen, and channel 3 is the printer. Before you can print anything, you must tell the Spectrum which channel to use.</p>
 <p>The ROM has a built-in routine at address 0x1601 that opens a channel. You tell it which one by putting the channel number in the A register before calling it. We want the main screen, so we put 2 in A.</p>
@@ -275,7 +307,7 @@ tr.highlight-row {
     <span class="keyword">RST</span> <span class="number">0x10</span>            <span class="comment">; Print whatever character is in A</span>
     <span class="keyword">RET</span>                 <span class="comment">; Return to the caller</span></code></pre>
 <p>To use it, load the character into A first, then call:</p>
-<pre><code>    <span class="keyword">LD</span> A, &#x27<span class="comment">;*&#x27;            ; Put ASCII code for &#x27;*&#x27; into A</span>
+<pre><code>    <span class="keyword">LD</span> A, &#x27<span class="comment">*&#x27;            ; Put ASCII code for &#x27;*&#x27; into A</span>
     <span class="keyword">CALL</span> print_char      <span class="comment">; Prints: *</span></code></pre>
 <p>For a newline, load 13 (carriage return) into A and call RST 0x10 directly — there is no need for a separate routine when it is just two instructions:</p>
 <pre><code>    <span class="keyword">LD</span> A, 13             <span class="comment">; 13 = carriage return</span>
@@ -329,6 +361,55 @@ tr.highlight-row {
     <span class="keyword">CALL</span> print_number    <span class="comment">; Prints: 42</span></code></pre>
 
 <h2 id="using-the-routines">Putting It All Together</h2>
+<p>Before you can call the routines, you need to create the file they live in. Open VS Code, paste the code below into a new file, and save it as <code>debug_output.asm</code> in the same folder as your programs. Every example in this guide that uses <code>INCLUDE "debug_output.asm"</code> expects this file to be there.</p>
+<pre><code><span class="comment">; =============================================================</span>
+<span class="comment">; debug_output.asm - Debug Display Routines for ZX Spectrum</span>
+<span class="comment">; =============================================================</span>
+<span class="comment">; INCLUDE this file in your program or copy the routines below.</span>
+<span class="comment">;</span>
+<span class="comment">; Call debug_init once at the start of your program to set up</span>
+<span class="comment">; the screen channel. Then use:</span>
+<span class="comment">;</span>
+<span class="comment">;   print_char    - Print a single character.  Input: A = char</span>
+<span class="comment">;   print_string  - Print a null-terminated string.  Input: HL</span>
+<span class="comment">;   print_number  - Print an 8-bit number (0-255).  Input: A</span>
+<span class="comment">;</span>
+<span class="comment">; For a newline, just do: LD A, 13 / RST 0x10</span>
+<span class="comment">; =============================================================</span>
+
+<span class="comment">; --- Call once at program start to open screen channel ---</span>
+<span class="label">debug_init</span>:
+    <span class="keyword">LD</span> A, 2             <span class="comment">; Channel 2 = main screen</span>
+    <span class="keyword">CALL</span> <span class="number">0x1601</span>         <span class="comment">; ROM: open channel</span>
+    <span class="keyword">RET</span>
+
+<span class="comment">; --- Print a single character in A ---</span>
+<span class="label">print_char</span>:
+    <span class="keyword">RST</span> <span class="number">0x10</span>            <span class="comment">; ROM: print character in A</span>
+    <span class="keyword">RET</span>
+
+<span class="comment">; --- Print null-terminated string at HL ---</span>
+<span class="label">print_string</span>:
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">OR</span> A                <span class="comment">; Check for null terminator</span>
+    <span class="keyword">RET</span> Z               <span class="comment">; Return if end of string</span>
+    <span class="keyword">RST</span> <span class="number">0x10</span>            <span class="comment">; ROM: print character</span>
+    <span class="keyword">INC</span> HL
+    <span class="keyword">JR</span> print_string
+
+<span class="comment">; --- Print 8-bit unsigned number in A (0-255) ---</span>
+<span class="label">print_number</span>:
+    <span class="keyword">PUSH</span> BC
+    <span class="keyword">LD</span> B, 0
+    <span class="keyword">LD</span> C, A             <span class="comment">; BC = the number</span>
+    <span class="keyword">CALL</span> <span class="number">0x2D28</span>         <span class="comment">; ROM: STACK_BC - push onto calculator stack</span>
+    <span class="keyword">CALL</span> <span class="number">0x2DE3</span>         <span class="comment">; ROM: PRINT_FP - print the number</span>
+    <span class="keyword">POP</span> BC
+    <span class="keyword">RET</span>
+
+<span class="comment">; =============================================================</span>
+<span class="comment">; END OF DEBUG ROUTINES</span>
+<span class="comment">; =============================================================</span></code></pre>
 <p>Call debug_init once at the start of your program. After that, use the three routines freely. Here is a complete program:</p>
 <pre><code>    <span class="directive">ORG</span> <span class="number">0x8000</span>
 
@@ -367,7 +448,7 @@ tr.highlight-row {
 <p class="bold-text">Pasmo is a portable Z80 cross-assembler. When you use the --tapbas flag, it produces a .tap file that includes a BASIC loader program. This loader automatically runs your machine code when the tape is loaded, so you don&#x27;t need to manually POKE addresses or type RANDOMIZE USR commands.</p>
 <p class="bold-text">Emulator: For ZX Spectrum development, Fuse is excellent and freely available for all major operating systems. It loads .tap files directly.</p>
 <h2 id="your-workflow">Your Workflow</h2>
-<p>The development cycle is simple. Write your assembly code in a .asm file. Assemble it with Pasmo. Load the resulting .tap file in Fuse. Here is how that looks:</p>
+<p>The development cycle is simple. Write your assembly code in a .asm file. Assemble it with Pasmo. Load the resulting .tap file in Fuse. The below example is similar to the 'print_char' method we created above. Here is how that looks:</p>
 <pre><code><span class="comment">; Save this as first.asm</span>
     <span class="directive">ORG</span> <span class="number">0x8000</span>           <span class="comment">; Code starts at address 32768</span>
 
@@ -378,9 +459,11 @@ tr.highlight-row {
     <span class="keyword">RET</span>                  <span class="comment">; Return to BASIC</span>
 
     <span class="directive">END</span> <span class="number">0x8000</span>           <span class="comment">; Entry point for BASIC loader</span></code></pre>
-<p>Assemble and run:</p>
+<p>Assemble:</p>
 <pre><code>pasmo --tapbas first.asm first.tap</code></pre>
-<p>Then open first.tap in Fuse. The BASIC loader runs automatically, executing your code. You should see an asterisk printed on screen.</p>
+<p>Then open first.tap in Fuse.</p> 
+<pre><code>fuse --tap first.tap --auto-load</code></pre>
+<p>The BASIC loader runs automatically, executing your code. You should see an asterisk printed on screen.</p>
 <p class="bold-text">The ORG 0x8000 directive tells the assembler where your code will live in memory (address 32768, safely above the Spectrum&#x27;s BASIC area). The END 0x8000 directive tells Pasmo&#x27;s BASIC loader what address to call with RANDOMIZE USR. RET at the end returns control back to BASIC.</p>
 <p class="bold-text">Key Difference: There&#x27;s no operating system in the traditional sense. The ZX Spectrum ROM provides some useful routines (like printing characters), but when your program ends with RET, control returns to the Spectrum&#x27;s BASIC interpreter. If you use HALT instead, the processor stops and you must reset the machine.</p>
 </section>
@@ -431,6 +514,87 @@ tr.highlight-row {
     <span class="keyword">LD</span> A, 13
     <span class="keyword">RST</span> <span class="number">0x10</span>            <span class="comment">; Newline</span></code></pre>
 <p class="bold-text">Key Difference: There&#x27;s no type checking, no automatic conversion, no protection. If you write a 16-bit value to an 8-bit location, you&#x27;ll overwrite whatever&#x27;s next in memory. You must track what&#x27;s stored where.</p>
+
+<h3 id="loading-storing-example">Try It Yourself</h3>
+<p>Copy the program below into VS Code, save it as <code>variables.asm</code> in the same folder as <code>debug_output.asm</code>, then assemble and run it. It loads and displays each of the four data types defined above so you can see exactly what gets stored where.</p>
+<p>For the array, we cannot simply load HL with the base address and walk forward with <code>INC HL</code>, because the ROM routines called inside <code>print_number</code> use HL internally and leave it pointing somewhere else — so any pointer you stored in HL is gone by the time the call returns. The fix is to <em>preserve</em> HL across each call using the stack. <code>PUSH HL</code> saves HL's current value onto the stack before the call, and <code>POP HL</code> restores it afterwards. Then <code>INC HL</code> advances the pointer to the next element as normal. This push-call-pop pattern is the standard Z80 technique for protecting a register across a subroutine call that might clobber it.</p>
+<pre><code>    <span class="directive">ORG</span> <span class="number">0x8000</span>
+
+    <span class="keyword">CALL</span> debug_init          <span class="comment">; Open the screen channel (do this first)</span>
+
+    <span class="comment">; --- my_byte (a single 8-bit value: 42) ---</span>
+    <span class="keyword">LD</span> HL, label_byte
+    <span class="keyword">CALL</span> print_string        <span class="comment">; Print label</span>
+    <span class="keyword">LD</span> A, (my_byte)          <span class="comment">; Load the byte from memory</span>
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 42</span>
+    <span class="keyword">LD</span> A, 13
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Newline</span>
+
+    <span class="comment">; --- my_string (null-terminated: "Hello") ---</span>
+    <span class="keyword">LD</span> HL, label_str
+    <span class="keyword">CALL</span> print_string        <span class="comment">; Print label</span>
+    <span class="keyword">LD</span> HL, my_string
+    <span class="keyword">CALL</span> print_string        <span class="comment">; Prints: Hello</span>
+    <span class="keyword">LD</span> A, 13
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Newline</span>
+
+    <span class="comment">; --- my_array (5 consecutive bytes: 1 2 3 4 5) ---</span>
+    <span class="comment">; PUSH HL before each print_number call to protect our pointer,</span>
+    <span class="comment">; POP HL after to restore it, then INC HL to advance to the next element.</span>
+    <span class="keyword">LD</span> HL, label_arr
+    <span class="keyword">CALL</span> print_string        <span class="comment">; Print label</span>
+    <span class="keyword">LD</span> HL, my_array          <span class="comment">; Point HL at the first element</span>
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">PUSH</span> HL                  <span class="comment">; Save HL — print_number will clobber it</span>
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 1</span>
+    <span class="keyword">POP</span> HL                   <span class="comment">; Restore HL so we know where we are</span>
+    <span class="keyword">LD</span> A, 32
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Space</span>
+    <span class="keyword">INC</span> HL                   <span class="comment">; Advance to element 2</span>
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">PUSH</span> HL
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 2</span>
+    <span class="keyword">POP</span> HL
+    <span class="keyword">LD</span> A, 32
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Space</span>
+    <span class="keyword">INC</span> HL                   <span class="comment">; Advance to element 3</span>
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">PUSH</span> HL
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 3</span>
+    <span class="keyword">POP</span> HL
+    <span class="keyword">LD</span> A, 32
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Space</span>
+    <span class="keyword">INC</span> HL                   <span class="comment">; Advance to element 4</span>
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">PUSH</span> HL
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 4</span>
+    <span class="keyword">POP</span> HL
+    <span class="keyword">LD</span> A, 32
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Space</span>
+    <span class="keyword">INC</span> HL                   <span class="comment">; Advance to element 5</span>
+    <span class="keyword">LD</span> A, (HL)
+    <span class="keyword">CALL</span> print_number        <span class="comment">; Prints: 5 (no PUSH/POP needed — we're done with HL)</span>
+    <span class="keyword">LD</span> A, 13
+    <span class="keyword">RST</span> <span class="number">0x10</span>                 <span class="comment">; Newline</span>
+
+    <span class="keyword">RET</span>                      <span class="comment">; Return to BASIC</span>
+
+<span class="comment">; --- Data ---</span>
+<span class="label">my_byte</span>:   <span class="directive">DB</span> 42
+<span class="label">my_string</span>: <span class="directive">DB</span> <span class="string">"Hello"</span>, 0
+<span class="label">my_array</span>:  <span class="directive">DB</span> 1, 2, 3, 4, 5
+
+<span class="comment">; --- Output labels ---</span>
+<span class="label">label_byte</span>: <span class="directive">DB</span> <span class="string">"my_byte:   "</span>, 0
+<span class="label">label_str</span>:  <span class="directive">DB</span> <span class="string">"my_string: "</span>, 0
+<span class="label">label_arr</span>:  <span class="directive">DB</span> <span class="string">"my_array:  "</span>, 0
+
+    <span class="directive">INCLUDE</span> <span class="string">"debug_output.asm"</span>
+    <span class="directive">END</span> <span class="number">0x8000</span></code></pre>
+<p>Expected output on screen:</p>
+<pre><code>my_byte:   42
+my_string: Hello
+my_array:  1 2 3 4 5</code></pre>
 </section>
 
 <section id="3-operators-expressions">
@@ -502,6 +666,69 @@ tr.highlight-row {
     <span class="keyword">CALL</span> print_number    <span class="comment">; Should display 30</span></code></pre>
 <p>Notice there&#x27;s no multiply instruction for simple multiplication. For multiplying by 2, you add the value to itself or use shift instructions. For general multiplication, you must implement it with loops or lookup tables.</p>
 <p class="bold-text">Key Difference: The Z80 has no MUL or DIV instructions. Multiplication and division must be implemented in software, typically through repeated addition/subtraction or clever use of shifts. This is why early games often used powers of 2 for sizes and speeds.</p>
+
+<h3 id="bitwise-try-it">Try It Yourself</h3>
+<p>Copy the program below into VS Code, save it as <code>bitwise.asm</code> alongside <code>debug_output.asm</code>, then assemble and run it. Rather than just printing numbers, this example uses AND and OR to directly manipulate the ZX Spectrum's <strong>attribute memory</strong> — producing a visible effect on screen.</p>
+<p>Every character cell on the Spectrum screen has a corresponding attribute byte in memory, starting at address <code>0x5800</code>. The byte packs four pieces of information into a single 8-bit value:</p>
+<pre><code><span class="comment">; Bit 7   Bit 6   Bit 5  Bit 4  Bit 3   Bit 2  Bit 1  Bit 0</span>
+<span class="comment">; Flash   Bright  Paper  Paper  Paper   Ink    Ink    Ink</span>
+<span class="comment">;</span>
+<span class="comment">; Flash=1  — the cell alternates between ink and paper colours at 50Hz</span>
+<span class="comment">; Bright=1 — makes both colours more vivid</span>
+<span class="comment">; Paper (bits 5:3) — background colour 0-7</span>
+<span class="comment">; Ink   (bits 2:0) — character colour 0-7</span></code></pre>
+<p>This is exactly the kind of problem AND and OR are designed for. <strong>OR</strong> sets specific bits to 1 without touching anything else — perfect for switching a flag on. <strong>AND</strong> clears specific bits to 0 without touching anything else — perfect for switching a flag off. The colour bits are never disturbed because only the flag bits are included in the mask.</p>
+<p><code>CALL 0x0DAF</code> is the Spectrum ROM's CLS routine. It clears the screen and moves the cursor to position (0, 0), so we know our text will land at attribute address <code>0x5800</code>. Without it, text would appear wherever the BASIC loader left the cursor, and we would not know which attribute cells to modify.</p>
+<pre><code>    <span class="directive">ORG</span> <span class="number">0x8000</span>
+
+    <span class="keyword">CALL</span> <span class="number">0x0DAF</span>              <span class="comment">; ROM: CLS — clear screen, cursor to (0,0)</span>
+    <span class="keyword">CALL</span> debug_init          <span class="comment">; Open screen channel</span>
+
+    <span class="keyword">LD</span> HL, msg
+    <span class="keyword">CALL</span> print_string        <span class="comment">; "FLASH!" appears at the top of the screen</span>
+
+    <span class="comment">; Use OR to set FLASH (bit 7) and BRIGHT (bit 6) on each of the 6 characters.</span>
+    <span class="comment">; OR %11000000 forces both bits to 1 without touching the colour bits.</span>
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5800</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on 'F'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5800</span>), A
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5801</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on 'L'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5801</span>), A
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5802</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on 'A'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5802</span>), A
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5803</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on 'S'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5803</span>), A
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5804</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on 'H'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5804</span>), A
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5805</span>)
+    <span class="keyword">OR</span> <span class="number">%11000000</span>             <span class="comment">; Set Flash + Bright on '!'</span>
+    <span class="keyword">LD</span> (<span class="number">0x5805</span>), A
+
+    <span class="comment">; Now use AND to clear just the FLASH bit (bit 7) on the first character.</span>
+    <span class="comment">; AND %01111111 forces bit 7 to 0 while leaving everything else unchanged.</span>
+    <span class="comment">; 'F' stops flashing but stays bright — the rest of the word keeps flashing.</span>
+
+    <span class="keyword">LD</span> A, (<span class="number">0x5800</span>)
+    <span class="keyword">AND</span> <span class="number">%01111111</span>            <span class="comment">; Clear Flash on 'F' only</span>
+    <span class="keyword">LD</span> (<span class="number">0x5800</span>), A
+
+    <span class="keyword">RET</span>                      <span class="comment">; Return to BASIC</span>
+
+<span class="label">msg</span>: <span class="directive">DB</span> <span class="string">"FLASH!"</span>, 0
+
+    <span class="directive">INCLUDE</span> <span class="string">"debug_output.asm"</span>
+    <span class="directive">END</span> <span class="number">0x8000</span></code></pre>
+<p>You should see <strong>FLASH!</strong> appear at the top of the screen. The letters LASH! will flash between white-on-black and black-on-white at 50 times per second. The leading F will stay steady — it has Bright set (via OR) but Flash cleared (via AND). That difference in behaviour is caused by a single bit in the attribute byte.</p>
 </section>
 
 <section id="4-control-flow-conditionals">
@@ -599,7 +826,7 @@ tr.highlight-row {
 <span class="label">var_a</span>: <span class="directive">DB</span> 10
 <span class="label">var_b</span>: <span class="directive">DB</span> 0
 
-    <span class="keyword">INCLUDE</span> <span class="string">"debug.asm"</span>
+    <span class="keyword">INCLUDE</span> <span class="string">"debug_output.asm"</span>
     <span class="directive">END</span> <span class="number">0x8000</span></code></pre>
 <p>For greater-than or less-than comparisons, you use CP and check the carry and sign flags. After CP B, the carry flag is set if A &lt; B (unsigned), and you can combine checks for signed comparisons.</p>
 <p class="bold-text">Key Difference: There&#x27;s no implicit &#x27;else&#x27; structure. You must explicitly jump over blocks you don&#x27;t want to execute. Every branch is a goto by another name. The structure exists only in how you lay out your labels and jumps.</p>
@@ -697,6 +924,35 @@ tr.highlight-row {
 <p>After this, the array in memory is: <code>4, 10, 20, 30, 60</code> — the length byte has been updated to 4 and the new value sits at the end.</p>
 <p class="bold-text">There is no bounds checking. If you add more elements than you reserved space for, you will silently overwrite whatever comes next in memory — other variables, other code, anything. There is no error, no warning. It is entirely your responsibility to check the length before adding and make sure you do not exceed the reserved space.</p>
 <p class="bold-text">Key Difference: Infinite loops are trivially easy—just JP back to a label with no exit condition. There&#x27;s no for-each; you manually track the pointer and count. Off-by-one errors are common and unforgiving.</p>
+
+<h3 id="loops-try-it">Try It Yourself</h3>
+<p>Copy the program below into VS Code, save it as <code>loops.asm</code>, then assemble and run it. It cycles the screen border through all eight colours, holding each one for half a second so you can see it change. It uses both loop patterns from this section at the same time: a DJNZ inner loop for the delay, and a while-style outer loop to step through the colours.</p>
+<p>The border colour is controlled by hardware port <code>0xFE</code>. Writing a value to it with <code>OUT (0xFE), A</code> sets the border immediately — bits 2:0 of A select the colour (0=black, 1=blue, 2=red, 3=magenta, 4=green, 5=cyan, 6=yellow, 7=white). You will see this instruction again in the Hardware chapter; for now, just treat it as "set border to the colour number in A".</p>
+<p><code>HALT</code> suspends the CPU until the next hardware interrupt. The Spectrum fires an interrupt 50 times per second, so each <code>HALT</code> waits roughly 20ms. Looping 25 times gives a half-second pause between colour changes — long enough to see each one clearly.</p>
+<pre><code>    <span class="directive">ORG</span> <span class="number">0x8000</span>
+
+    <span class="keyword">LD</span> C, 0              <span class="comment">; C = current border colour, starting at 0</span>
+
+<span class="label">colour_loop</span>:
+    <span class="keyword">LD</span> A, C
+    <span class="keyword">OUT</span> (<span class="number">0xFE</span>), A        <span class="comment">; Set the border to colour C</span>
+
+    <span class="comment">; Inner DJNZ loop: 25 HALTs x 20ms each = ~0.5 seconds</span>
+    <span class="keyword">LD</span> B, 25
+<span class="label">delay_loop</span>:
+    <span class="keyword">HALT</span>                 <span class="comment">; Wait for the next interrupt (~20ms)</span>
+    <span class="keyword">DJNZ</span> delay_loop      <span class="comment">; Repeat 25 times</span>
+
+    <span class="comment">; Advance to the next colour and loop while C &lt; 8</span>
+    <span class="keyword">INC</span> C
+    <span class="keyword">LD</span> A, C
+    <span class="keyword">CP</span> 8                 <span class="comment">; Have we shown all 8 colours (0-7)?</span>
+    <span class="keyword">JP</span> NZ, colour_loop   <span class="comment">; No — go back for the next one</span>
+
+    <span class="keyword">RET</span>                  <span class="comment">; Yes — all colours shown, return to BASIC</span>
+
+    <span class="directive">END</span> <span class="number">0x8000</span></code></pre>
+<p>The border should step through black, blue, red, magenta, green, cyan, yellow, and white, spending about half a second on each. Notice how the two loops nest: the outer <code>colour_loop</code> runs 8 times driven by the <code>CP 8 / JP NZ</code> condition, and each pass through it runs the inner <code>delay_loop</code> 25 times via DJNZ before moving to the next colour.</p>
 </section>
 
 <section id="6-functions">
