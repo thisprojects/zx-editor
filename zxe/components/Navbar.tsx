@@ -10,6 +10,7 @@ const navItems = [
   { href: '/scene_editor', label: 'Scene Editor' },
   { href: '/tile_editor', label: 'Tile Editor' },
   { href: '/level_editor', label: 'Level Editor' },
+  { href: '/charset_editor', label: 'Charset Editor' },
 ];
 
 const docItems = [

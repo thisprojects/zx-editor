@@ -70,3 +70,8 @@ export const DEFAULT_ANIMATION_FPS = 10;
 export const DEFAULT_FRAME_DURATION = 100;
 export const MAX_ANIMATION_FRAMES = 32;
 export const PRESHIFT_COUNT = 8;
+
+// Charset Editor constants
+export const CHARSET_COUNT = 96;           // ASCII 32-127
+export const CHARSET_GRID_COLS = 16;       // characters per row in the overview grid
+export const CHARSET_DEFAULT_PIXEL_SIZE = 20; // display px per ZX pixel in the pixel editor

@@ -25,6 +25,7 @@ describe('Navbar', () => {
       expect(screen.getByText('Scene Editor')).toBeInTheDocument();
       expect(screen.getByText('Tile Editor')).toBeInTheDocument();
       expect(screen.getByText('Level Editor')).toBeInTheDocument();
+      expect(screen.getByText('Charset Editor')).toBeInTheDocument();
     });
 
     it('should render links with correct hrefs', () => {
@@ -36,6 +37,7 @@ describe('Navbar', () => {
       expect(screen.getByRole('link', { name: 'Scene Editor' })).toHaveAttribute('href', '/scene_editor');
       expect(screen.getByRole('link', { name: 'Tile Editor' })).toHaveAttribute('href', '/tile_editor');
       expect(screen.getByRole('link', { name: 'Level Editor' })).toHaveAttribute('href', '/level_editor');
+      expect(screen.getByRole('link', { name: 'Charset Editor' })).toHaveAttribute('href', '/charset_editor');
     });
   });
 
@@ -101,6 +103,17 @@ describe('Navbar', () => {
 
       expect(tileLink).not.toHaveClass('bg-blue-600');
       expect(levelLink).toHaveClass('bg-blue-600');
+    });
+
+    it('should highlight Charset Editor when on charset_editor page', () => {
+      mockUsePathname.mockReturnValue('/charset_editor');
+      render(<Navbar />);
+
+      const charsetLink = screen.getByRole('link', { name: 'Charset Editor' });
+      const tileLink = screen.getByRole('link', { name: 'Tile Editor' });
+
+      expect(charsetLink).toHaveClass('bg-blue-600');
+      expect(tileLink).not.toHaveClass('bg-blue-600');
     });
 
     it('should not highlight any link when on unknown page', () => {

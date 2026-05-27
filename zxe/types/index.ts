@@ -1,4 +1,5 @@
 export type Tool = 'pencil' | 'line' | 'rubber' | 'bucket' | 'pan';
+export type CharsetTool = 'pencil' | 'line' | 'rubber';
 
 // Attribute byte structure (per 8x8 character cell)
 export interface Attribute {
@@ -99,6 +100,14 @@ export interface SoftwareSpriteExportOptions {
   includeMask: boolean;
   interleaving: MaskInterleaving;
   generateLookupTable: boolean;
+}
+
+// Charset Editor types
+export interface CharsetProjectData {
+  version: number;
+  type: 'charset';
+  charCount: number;
+  chars: boolean[][][]; // [charIndex][row][col]
 }
 
 // Project file
