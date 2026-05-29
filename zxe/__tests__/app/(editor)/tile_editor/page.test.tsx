@@ -2,6 +2,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import TileEditorPage from '@/app/(editor)/tile_editor/page';
 
 describe('Tile Editor page', () => {
+  beforeEach(() => {
+    localStorage.setItem('tileEditor_hideInstructions', 'true');
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
   describe('rendering', () => {
     it('should render the page title in toolbar', () => {
       render(<TileEditorPage />);
@@ -34,7 +42,7 @@ describe('Tile Editor page', () => {
       render(<TileEditorPage />);
       expect(screen.getByText('Load')).toBeInTheDocument();
       expect(screen.getByText('Save')).toBeInTheDocument();
-      expect(screen.getByText('Export')).toBeInTheDocument();
+      expect(screen.getByText('Export ASM')).toBeInTheDocument();
       expect(screen.getByText('Clear')).toBeInTheDocument();
     });
 
@@ -142,9 +150,9 @@ describe('Tile Editor page', () => {
 
     it('should open export modal when Export clicked', () => {
       render(<TileEditorPage />);
-      fireEvent.click(screen.getByText('Export'));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
 
-      expect(screen.getByText('Export ASM')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Export ASM' })).toBeInTheDocument();
     });
 
     it('should close modal when Cancel clicked', () => {
@@ -156,6 +164,26 @@ describe('Tile Editor page', () => {
       fireEvent.click(screen.getByText('Cancel'));
 
       expect(screen.queryByText('Save Project')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('instructions modal', () => {
+    it('shows instructions modal when localStorage key is not set', () => {
+      localStorage.clear();
+      render(<TileEditorPage />);
+      expect(screen.getByRole('heading', { name: 'Tile Editor — How to Use' })).toBeInTheDocument();
+    });
+
+    it('does not show instructions modal when localStorage key is set', () => {
+      render(<TileEditorPage />);
+      expect(screen.queryByRole('heading', { name: 'Tile Editor — How to Use' })).not.toBeInTheDocument();
+    });
+
+    it('closes instructions modal when Got it is clicked', () => {
+      localStorage.clear();
+      render(<TileEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+      expect(screen.queryByRole('heading', { name: 'Tile Editor — How to Use' })).not.toBeInTheDocument();
     });
   });
 });

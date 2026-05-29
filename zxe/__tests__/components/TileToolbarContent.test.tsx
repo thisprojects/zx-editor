@@ -253,7 +253,7 @@ describe('TileToolbarContent', () => {
       const props = createDefaultProps();
       renderWithProvider(<TileToolbarContent {...props} />);
 
-      fireEvent.click(screen.getByText('Export'));
+      fireEvent.click(screen.getByText('Export ASM'));
 
       expect(props.onExport).toHaveBeenCalled();
     });

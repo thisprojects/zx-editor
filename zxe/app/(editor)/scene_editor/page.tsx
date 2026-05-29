@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSceneDrawing } from '@/hooks/useSceneDrawing';
 import { useSceneProject } from '@/hooks/useSceneProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,15 +8,21 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { SceneToolbarContent } from '@/components/SceneToolbarContent';
 import { SceneCanvas } from '@/components/SceneCanvas';
 import { FileNameModal } from '@/components/FileNameModal';
+import { SceneInstructionsModal, shouldShowSceneInstructions } from '@/components/SceneInstructionsModal';
 import { DEFAULT_SCREEN_PIXEL_SIZE } from '@/constants';
 
 export default function SceneEditorPage() {
   const [fileName, setFileName] = useState('screen');
   const [showModal, setShowModal] = useState(false);
-  const [modalAction, setModalAction] = useState<'save' | 'export' | 'exportScr' | null>(null);
+  const [modalAction, setModalAction] = useState<'save' | 'exportScr' | null>(null);
   const [pixelSize, setPixelSize] = useState(DEFAULT_SCREEN_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowSceneInstructions());
+  }, []);
 
   const drawing = useSceneDrawing();
 
@@ -30,7 +36,7 @@ export default function SceneEditorPage() {
     loadProjectData: drawing.loadProjectData,
   });
 
-  const openSaveModal = (action: 'save' | 'export' | 'exportScr') => {
+  const openSaveModal = (action: 'save' | 'exportScr') => {
     setModalAction(action);
     setShowModal(true);
   };
@@ -38,8 +44,6 @@ export default function SceneEditorPage() {
   const handleModalConfirm = () => {
     if (modalAction === 'save') {
       project.saveProject();
-    } else if (modalAction === 'export') {
-      project.exportASM();
     } else if (modalAction === 'exportScr') {
       project.saveSCR();
     }
@@ -90,7 +94,6 @@ export default function SceneEditorPage() {
           historyIndex={drawing.historyIndex}
           onLoad={project.triggerLoadDialog}
           onSave={() => openSaveModal('save')}
-          onExport={() => openSaveModal('export')}
           onLoadSCR={project.triggerLoadSCRDialog}
           onExportSCR={() => openSaveModal('exportScr')}
           onClear={drawing.clearCanvas}
@@ -159,6 +162,12 @@ export default function SceneEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+      />
+
+      {/* Instructions Modal */}
+      <SceneInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
       />
     </>
   );

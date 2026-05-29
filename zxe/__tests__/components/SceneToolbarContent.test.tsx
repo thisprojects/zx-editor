@@ -41,7 +41,6 @@ describe('SceneToolbarContent', () => {
     historyIndex: 1,
     onLoad: jest.fn(),
     onSave: jest.fn(),
-    onExport: jest.fn(),
     onLoadSCR: jest.fn(),
     onExportSCR: jest.fn(),
     onClear: jest.fn(),
@@ -239,15 +238,6 @@ describe('SceneToolbarContent', () => {
       expect(props.onSave).toHaveBeenCalled();
     });
 
-    it('should call onExport when Export ASM clicked', () => {
-      const props = createDefaultProps();
-      renderWithProvider(<SceneToolbarContent {...props} />);
-
-      fireEvent.click(screen.getByText('Export ASM'));
-
-      expect(props.onExport).toHaveBeenCalled();
-    });
-
     it('should call onLoadSCR when Load SCR clicked', () => {
       const props = createDefaultProps();
       renderWithProvider(<SceneToolbarContent {...props} />);
@@ -281,7 +271,6 @@ describe('SceneToolbarContent', () => {
 
       expect(screen.getByText('Load')).toBeInTheDocument();
       expect(screen.getByText('Save')).toBeInTheDocument();
-      expect(screen.getByText('Export ASM')).toBeInTheDocument();
       expect(screen.getByText('Load SCR')).toBeInTheDocument();
       expect(screen.getByText('Export SCR')).toBeInTheDocument();
       expect(screen.getByText('Clear')).toBeInTheDocument();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSoftwareSpriteDrawing } from '@/hooks/useSoftwareSpriteDrawing';
 import { useSoftwareSpriteProject } from '@/hooks/useSoftwareSpriteProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,6 +8,7 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { PlayerSpriteToolbarContent } from '@/components/PlayerSpriteToolbarContent';
 import { PlayerSpriteCanvas } from '@/components/PlayerSpriteCanvas';
 import { FileNameModal } from '@/components/FileNameModal';
+import { PlayerSpriteInstructionsModal, shouldShowPlayerSpriteInstructions } from '@/components/PlayerSpriteInstructionsModal';
 import { DEFAULT_SOFTWARE_SPRITE_PIXEL_SIZE } from '@/constants';
 
 export default function PlayerSpriteEditorPage() {
@@ -16,6 +17,11 @@ export default function PlayerSpriteEditorPage() {
   const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
   const [pixelSize, setPixelSize] = useState(DEFAULT_SOFTWARE_SPRITE_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowPlayerSpriteInstructions());
+  }, []);
 
   const drawing = useSoftwareSpriteDrawing();
 
@@ -192,6 +198,12 @@ export default function PlayerSpriteEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+      />
+
+      {/* Instructions Modal */}
+      <PlayerSpriteInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
       />
     </>
   );

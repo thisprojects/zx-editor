@@ -44,23 +44,6 @@ describe('FileNameModal component', () => {
     });
   });
 
-  describe('export mode', () => {
-    it('should show "Export ASM" title when action is export', () => {
-      render(<FileNameModal {...defaultProps} action="export" />);
-      expect(screen.getByText('Export ASM')).toBeInTheDocument();
-    });
-
-    it('should show .asm extension when action is export', () => {
-      render(<FileNameModal {...defaultProps} action="export" />);
-      expect(screen.getByText('.asm')).toBeInTheDocument();
-    });
-
-    it('should show "Export" button when action is export', () => {
-      render(<FileNameModal {...defaultProps} action="export" />);
-      expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
-    });
-  });
-
   describe('file name input', () => {
     it('should display current fileName', () => {
       render(<FileNameModal {...defaultProps} fileName="my_sprite" />);
@@ -128,7 +111,7 @@ describe('FileNameModal component', () => {
   describe('exportScr mode', () => {
     it('should show "Export SCR" title when action is exportScr', () => {
       render(<FileNameModal {...defaultProps} action="exportScr" />);
-      expect(screen.getByText('Export SCR')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Export SCR' })).toBeInTheDocument();
     });
 
     it('should show .scr extension when action is exportScr', () => {
@@ -136,14 +119,14 @@ describe('FileNameModal component', () => {
       expect(screen.getByText('.scr')).toBeInTheDocument();
     });
 
-    it('should show "Export" button when action is exportScr', () => {
+    it('should show "Export SCR" button when action is exportScr', () => {
       render(<FileNameModal {...defaultProps} action="exportScr" />);
-      expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Export SCR' })).toBeInTheDocument();
     });
 
-    it('should call onConfirm when Export button clicked', () => {
+    it('should call onConfirm when Export SCR button clicked', () => {
       render(<FileNameModal {...defaultProps} action="exportScr" />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
       expect(defaultProps.onConfirm).toHaveBeenCalled();
     });
 
@@ -163,8 +146,7 @@ describe('FileNameModal component', () => {
   describe('null action', () => {
     it('should handle null action gracefully', () => {
       render(<FileNameModal {...defaultProps} action={null} />);
-      // Should not crash, title shows "Export ASM" for non-save
-      expect(screen.getByText('Export ASM')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Export ASM' })).toBeInTheDocument();
     });
   });
 

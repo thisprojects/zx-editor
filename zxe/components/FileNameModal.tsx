@@ -19,12 +19,14 @@ export function FileNameModal({
 }: FileNameModalProps) {
   if (!isOpen) return null;
 
+  const title = action === 'save' ? 'Save Project' : action === 'exportScr' ? 'Export SCR' : 'Export ASM';
+  const extension = action === 'save' ? '.json' : action === 'exportScr' ? '.scr' : '.asm';
+  const confirmLabel = action === 'save' ? 'Save' : action === 'exportScr' ? 'Export SCR' : 'Export ASM';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-6 w-80 shadow-xl">
-        <h2 className="text-xl font-bold mb-4">
-          {action === 'save' ? 'Save Project' : action === 'exportScr' ? 'Export SCR' : 'Export ASM'}
-        </h2>
+        <h2 className="text-xl font-bold mb-4">{title}</h2>
         <div className="mb-4">
           <label className="block text-sm text-gray-400 mb-2">Filename</label>
           <div className="flex items-center">
@@ -40,7 +42,7 @@ export function FileNameModal({
               className="flex-1 px-3 py-2 rounded-l bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
             />
             <span className="px-3 py-2 bg-gray-600 text-gray-300 rounded-r border border-l-0 border-gray-600">
-              {action === 'save' ? '.json' : action === 'exportScr' ? '.scr' : '.asm'}
+              {extension}
             </span>
           </div>
         </div>
@@ -55,7 +57,7 @@ export function FileNameModal({
             onClick={onConfirm}
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500"
           >
-            {action === 'save' ? 'Save' : 'Export'}
+            {confirmLabel}
           </button>
         </div>
       </div>

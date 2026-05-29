@@ -63,13 +63,6 @@ describe('useSceneProject hook', () => {
       expect(typeof result.current.saveProject).toBe('function');
     });
 
-    it('should return exportASM function', () => {
-      const props = createMockProps();
-      const { result } = renderHook(() => useSceneProject(props));
-
-      expect(typeof result.current.exportASM).toBe('function');
-    });
-
     it('should return loadProject function', () => {
       const props = createMockProps();
       const { result } = renderHook(() => useSceneProject(props));
@@ -122,22 +115,6 @@ describe('useSceneProject hook', () => {
       });
 
       expect(downloadAttribute).toBe('my_scene_scene.json');
-    });
-  });
-
-  describe('exportASM', () => {
-    it('should export screen data', () => {
-      const props = createMockProps();
-      // Draw something
-      props.pixels[0][0] = true;
-
-      const { result } = renderHook(() => useSceneProject(props));
-
-      act(() => {
-        result.current.exportASM();
-      });
-
-      expect(mockClick).toHaveBeenCalled();
     });
   });
 

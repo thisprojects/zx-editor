@@ -411,7 +411,7 @@ export function SpriteToolbarContent({
             onClick={onExport}
             className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
           >
-            Export
+            Export ASM
           </button>
           <button
             onClick={onClear}

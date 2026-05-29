@@ -252,7 +252,7 @@ describe('Toolbar component', () => {
     it('should call onExport when Export button clicked', () => {
       const props = createDefaultProps();
       renderWithProvider(<Toolbar {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       expect(props.onExport).toHaveBeenCalled();
     });
 
@@ -280,7 +280,7 @@ describe('Toolbar component', () => {
     it('should have yellow styling for Export button', () => {
       const props = createDefaultProps();
       renderWithProvider(<Toolbar {...props} />);
-      expect(screen.getByRole('button', { name: 'Export' })).toHaveClass('bg-yellow-600');
+      expect(screen.getByRole('button', { name: 'Export ASM' })).toHaveClass('bg-yellow-600');
     });
 
     it('should have red styling for Clear button', () => {

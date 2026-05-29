@@ -68,6 +68,31 @@ jest.mock('@/hooks/useProject', () => ({
 describe('Sprite Editor page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.setItem('udgEditor_hideInstructions', 'true');
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  describe('instructions modal', () => {
+    it('shows instructions modal when localStorage key is not set', () => {
+      localStorage.clear();
+      render(<SpriteEditorPage />);
+      expect(screen.getByRole('heading', { name: 'UDG Sprite Editor — How to Use' })).toBeInTheDocument();
+    });
+
+    it('does not show instructions modal when localStorage key is set', () => {
+      render(<SpriteEditorPage />);
+      expect(screen.queryByRole('heading', { name: 'UDG Sprite Editor — How to Use' })).not.toBeInTheDocument();
+    });
+
+    it('closes instructions modal when Got it is clicked', () => {
+      localStorage.clear();
+      render(<SpriteEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+      expect(screen.queryByRole('heading', { name: 'UDG Sprite Editor — How to Use' })).not.toBeInTheDocument();
+    });
   });
 
   describe('rendering', () => {
@@ -132,7 +157,7 @@ describe('Sprite Editor page', () => {
 
     it('should open export modal when Export ASM is clicked', () => {
       render(<SpriteEditorPage />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       // Modal heading says "Export ASM"
       expect(screen.getByRole('heading', { name: 'Export ASM' })).toBeInTheDocument();
     });
@@ -286,17 +311,17 @@ describe('Sprite Editor page', () => {
   describe('export modal', () => {
     it('should show Export button in export modal', () => {
       render(<SpriteEditorPage />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       // There are now two Export buttons - toolbar and modal
-      const exportButtons = screen.getAllByRole('button', { name: 'Export' });
+      const exportButtons = screen.getAllByRole('button', { name: 'Export ASM' });
       expect(exportButtons.length).toBe(2);
     });
 
     it('should close export modal on confirm', () => {
       render(<SpriteEditorPage />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       // Click the modal's Export button (last one)
-      const exportButtons = screen.getAllByRole('button', { name: 'Export' });
+      const exportButtons = screen.getAllByRole('button', { name: 'Export ASM' });
       fireEvent.click(exportButtons[exportButtons.length - 1]);
       expect(screen.queryByRole('heading', { name: 'Export ASM' })).not.toBeInTheDocument();
     });

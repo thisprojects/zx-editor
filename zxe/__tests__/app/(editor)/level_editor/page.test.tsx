@@ -9,6 +9,11 @@ describe('Level Editor page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockConfirm.mockReturnValue(true);
+    localStorage.setItem('levelEditor_hideInstructions', 'true');
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   describe('rendering', () => {
@@ -215,6 +220,26 @@ describe('Level Editor page', () => {
     it('should show Add button for tile library', () => {
       render(<LevelEditorPage />);
       expect(screen.getByTitle('Load tile from file')).toBeInTheDocument();
+    });
+  });
+
+  describe('instructions modal', () => {
+    it('shows instructions modal when localStorage key is not set', () => {
+      localStorage.clear();
+      render(<LevelEditorPage />);
+      expect(screen.getByRole('heading', { name: 'Level Editor — How to Use' })).toBeInTheDocument();
+    });
+
+    it('does not show instructions modal when localStorage key is set', () => {
+      render(<LevelEditorPage />);
+      expect(screen.queryByRole('heading', { name: 'Level Editor — How to Use' })).not.toBeInTheDocument();
+    });
+
+    it('closes instructions modal when Got it is clicked', () => {
+      localStorage.clear();
+      render(<LevelEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+      expect(screen.queryByRole('heading', { name: 'Level Editor — How to Use' })).not.toBeInTheDocument();
     });
   });
 });

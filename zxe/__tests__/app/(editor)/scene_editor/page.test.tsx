@@ -39,7 +39,6 @@ jest.mock('@/hooks/useSceneProject', () => ({
     projectInputRef: { current: null },
     scrInputRef: { current: null },
     saveProject: jest.fn(),
-    exportASM: jest.fn(),
     saveSCR: jest.fn(),
     loadProject: jest.fn(),
     loadSCR: jest.fn(),
@@ -51,6 +50,11 @@ jest.mock('@/hooks/useSceneProject', () => ({
 describe('Scene Editor page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.setItem('sceneEditor_hideInstructions', 'true');
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   describe('rendering', () => {
@@ -94,7 +98,6 @@ describe('Scene Editor page', () => {
       expect(screen.getByText('File')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Export ASM' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Load SCR' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Export SCR' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
@@ -164,12 +167,6 @@ describe('Scene Editor page', () => {
       expect(screen.getByText('Save Project')).toBeInTheDocument();
     });
 
-    it('should open export modal when Export ASM is clicked', () => {
-      render(<SceneEditorPage />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
-      expect(screen.getByRole('heading', { name: 'Export ASM' })).toBeInTheDocument();
-    });
-
     it('should close modal when Cancel is clicked', () => {
       render(<SceneEditorPage />);
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -200,10 +197,14 @@ describe('Scene Editor page', () => {
       expect(screen.queryByRole('heading', { name: 'Export SCR' })).not.toBeInTheDocument();
     });
 
-    it('should not show multiple modals open at once', () => {
+    it('should not show multiple file modals open at once', () => {
       render(<SceneEditorPage />);
       fireEvent.click(screen.getByRole('button', { name: 'Export SCR' }));
-      expect(screen.getAllByRole('heading').filter(h => h.tagName === 'H2')).toHaveLength(1);
+      const h2s = screen.getAllByRole('heading').filter(h => h.tagName === 'H2');
+      const fileModalHeadings = h2s.filter(h =>
+        h.textContent === 'Export SCR' || h.textContent === 'Save Project'
+      );
+      expect(fileModalHeadings).toHaveLength(1);
     });
   });
 
@@ -224,6 +225,26 @@ describe('Scene Editor page', () => {
       // Click to disable
       fireEvent.click(gridButton);
       expect(gridButton).not.toHaveClass('bg-blue-600');
+    });
+  });
+
+  describe('instructions modal', () => {
+    it('shows instructions modal when localStorage key is not set', () => {
+      localStorage.clear();
+      render(<SceneEditorPage />);
+      expect(screen.getByRole('heading', { name: 'Scene Editor — How to Use' })).toBeInTheDocument();
+    });
+
+    it('does not show instructions modal when localStorage key is set', () => {
+      render(<SceneEditorPage />);
+      expect(screen.queryByRole('heading', { name: 'Scene Editor — How to Use' })).not.toBeInTheDocument();
+    });
+
+    it('closes instructions modal when Got it is clicked', () => {
+      localStorage.clear();
+      render(<SceneEditorPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+      expect(screen.queryByRole('heading', { name: 'Scene Editor — How to Use' })).not.toBeInTheDocument();
     });
   });
 });

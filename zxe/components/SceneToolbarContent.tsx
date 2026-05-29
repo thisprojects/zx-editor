@@ -38,7 +38,6 @@ interface SceneToolbarContentProps {
   historyIndex: number;
   onLoad: () => void;
   onSave: () => void;
-  onExport: () => void;
   onLoadSCR: () => void;
   onExportSCR: () => void;
   onClear: () => void;
@@ -73,7 +72,6 @@ export function SceneToolbarContent({
   historyIndex,
   onLoad,
   onSave,
-  onExport,
   onLoadSCR,
   onExportSCR,
   onClear,
@@ -400,12 +398,6 @@ export function SceneToolbarContent({
             className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 text-xs"
           >
             Save
-          </button>
-          <button
-            onClick={onExport}
-            className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
-          >
-            Export ASM
           </button>
           <button
             onClick={onLoadSCR}

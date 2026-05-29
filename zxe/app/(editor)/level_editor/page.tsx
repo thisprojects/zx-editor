@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLevelDrawing } from '@/hooks/useLevelDrawing';
 import { useLevelProject } from '@/hooks/useLevelProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,6 +8,7 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { LevelToolbarContent } from '@/components/LevelToolbarContent';
 import { LevelCanvas } from '@/components/LevelCanvas';
 import { FileNameModal } from '@/components/FileNameModal';
+import { LevelInstructionsModal, shouldShowLevelInstructions } from '@/components/LevelInstructionsModal';
 import { DEFAULT_LEVEL_PIXEL_SIZE } from '@/constants';
 
 export default function LevelEditorPage() {
@@ -17,6 +18,11 @@ export default function LevelEditorPage() {
   const [pixelSize, setPixelSize] = useState(DEFAULT_LEVEL_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowLevelInstructions());
+  }, []);
 
   const drawing = useLevelDrawing();
 
@@ -145,6 +151,12 @@ export default function LevelEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+      />
+
+      {/* Instructions Modal */}
+      <LevelInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
       />
     </>
   );

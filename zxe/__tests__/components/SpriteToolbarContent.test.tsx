@@ -89,7 +89,7 @@ describe('SpriteToolbarContent', () => {
       expect(screen.getByText('File')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Export ASM' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
     });
   });
@@ -281,7 +281,7 @@ describe('SpriteToolbarContent', () => {
       const onExport = jest.fn();
       renderWithProvider(<SpriteToolbarContent {...defaultProps} onExport={onExport} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export ASM' }));
       expect(onExport).toHaveBeenCalledTimes(1);
     });
 

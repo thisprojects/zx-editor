@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDrawing } from '@/hooks/useDrawing';
 import { useProject } from '@/hooks/useProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,6 +8,7 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { SpriteToolbarContent } from '@/components/SpriteToolbarContent';
 import { Canvas } from '@/components/Canvas';
 import { FileNameModal } from '@/components/FileNameModal';
+import { UDGInstructionsModal, shouldShowUDGInstructions } from '@/components/UDGInstructionsModal';
 import { DEFAULT_PIXEL_SIZE } from '@/constants';
 
 export default function SpriteEditorPage() {
@@ -16,6 +17,11 @@ export default function SpriteEditorPage() {
   const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
   const [pixelSize, setPixelSize] = useState(DEFAULT_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowUDGInstructions());
+  }, []);
 
   const drawing = useDrawing();
 
@@ -151,6 +157,12 @@ export default function SpriteEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+      />
+
+      {/* Instructions Modal */}
+      <UDGInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
       />
     </>
   );

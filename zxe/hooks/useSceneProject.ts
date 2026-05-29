@@ -3,7 +3,7 @@
 import { useRef, useCallback } from 'react';
 import { Attribute } from '@/types';
 import { SCREEN_CHARS_WIDTH, SCREEN_CHARS_HEIGHT, SCREEN_TOTAL_SIZE } from '@/constants';
-import { exportScreenASM, encodeSCR, decodeSCR } from '@/utils/export';
+import { encodeSCR, decodeSCR } from '@/utils/export';
 
 interface SceneProjectData {
   version: number;
@@ -57,15 +57,6 @@ export function useSceneProject({
     a.download = `${fileName}_scene.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [pixels, attributes, fileName]);
-
-  // Export as ASM
-  const exportASM = useCallback(() => {
-    exportScreenASM({
-      pixels,
-      attributes,
-      fileName,
-    });
   }, [pixels, attributes, fileName]);
 
   // Load project from JSON file
@@ -172,7 +163,6 @@ export function useSceneProject({
     projectInputRef,
     scrInputRef,
     saveProject,
-    exportASM,
     saveSCR,
     loadProject,
     loadSCR,

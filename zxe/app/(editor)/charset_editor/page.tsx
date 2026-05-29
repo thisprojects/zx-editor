@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCharsetDrawing } from '@/hooks/useCharsetDrawing';
 import { useCharsetProject } from '@/hooks/useCharsetProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,11 +8,17 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { CharsetToolbarContent } from '@/components/CharsetToolbarContent';
 import { CharsetGridCanvas } from '@/components/CharsetGridCanvas';
 import { CharsetPixelCanvas } from '@/components/CharsetPixelCanvas';
+import { CharsetInstructionsModal, shouldShowCharsetInstructions } from '@/components/CharsetInstructionsModal';
 import { CHARSET_COUNT } from '@/constants';
 
 export default function CharsetEditorPage() {
   const [fileName, setFileName] = useState('charset');
   const [toolbarOpen, setToolbarOpen] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowCharsetInstructions());
+  }, []);
 
   const drawing = useCharsetDrawing();
   useUndoRedoShortcuts({ onUndo: drawing.undo, onRedo: drawing.redo });
@@ -129,6 +135,10 @@ export default function CharsetEditorPage() {
 
         </div>
       </div>
+      <CharsetInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
+      />
     </>
   );
 }

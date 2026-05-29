@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTileDrawing } from '@/hooks/useTileDrawing';
 import { useTileProject } from '@/hooks/useTileProject';
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
@@ -8,6 +8,7 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { TileToolbarContent } from '@/components/TileToolbarContent';
 import { TileCanvas } from '@/components/TileCanvas';
 import { FileNameModal } from '@/components/FileNameModal';
+import { TileInstructionsModal, shouldShowTileInstructions } from '@/components/TileInstructionsModal';
 import { DEFAULT_TILE_PIXEL_SIZE } from '@/constants';
 
 export default function TileEditorPage() {
@@ -16,6 +17,11 @@ export default function TileEditorPage() {
   const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
   const [pixelSize, setPixelSize] = useState(DEFAULT_TILE_PIXEL_SIZE);
   const [toolbarOpen, setToolbarOpen] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(shouldShowTileInstructions());
+  }, []);
 
   const drawing = useTileDrawing();
 
@@ -127,6 +133,12 @@ export default function TileEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+      />
+
+      {/* Instructions Modal */}
+      <TileInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
       />
     </>
   );
