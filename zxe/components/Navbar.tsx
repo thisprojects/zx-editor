@@ -33,7 +33,14 @@ export function Navbar() {
   }, []);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-10 bg-gray-800 border-b border-gray-700 z-50 flex items-center px-4">
+    <nav className="fixed top-0 left-0 right-0 h-10 bg-gray-800 border-b border-gray-700 z-50 flex items-center px-4 gap-4">
+      <Link
+        href="/"
+        className="text-green-400 text-xl select-none shrink-0 hover:text-green-300 transition-colors"
+        style={{ fontFamily: 'var(--font-vt323)', letterSpacing: '0.05em' }}
+      >
+        NorbSoft
+      </Link>
       <div className="flex items-center gap-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;

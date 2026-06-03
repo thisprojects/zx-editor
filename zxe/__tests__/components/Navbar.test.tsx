@@ -232,6 +232,39 @@ describe('Navbar', () => {
     });
   });
 
+  describe('NorbSoft logo', () => {
+    it('should render the NorbSoft logo', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      expect(screen.getByRole('link', { name: 'NorbSoft' })).toBeInTheDocument();
+    });
+
+    it('should link to the home page', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      expect(screen.getByRole('link', { name: 'NorbSoft' })).toHaveAttribute('href', '/');
+    });
+
+    it('should use the VT323 terminal font variable', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      const logo = screen.getByRole('link', { name: 'NorbSoft' });
+      expect(logo).toHaveStyle({ fontFamily: 'var(--font-vt323)' });
+    });
+
+    it('should render before the editor nav links', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      const nav = screen.getByRole('navigation');
+      const links = nav.querySelectorAll('a');
+      expect(links[0]).toHaveAttribute('href', '/');
+    });
+  });
+
   describe('styling', () => {
     it('should have fixed positioning', () => {
       mockUsePathname.mockReturnValue('/sprite_editor');
