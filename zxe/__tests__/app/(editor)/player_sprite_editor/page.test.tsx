@@ -11,7 +11,7 @@ jest.mock('@/hooks/useSoftwareSpriteDrawing', () => ({
     heightChars: 2,
     pixels: Array(16).fill(null).map(() => Array(16).fill(false)),
     attributes: Array(2).fill(null).map(() => Array(2).fill({ ink: 7, paper: 0, bright: false })),
-    frames: [{ name: 'frame 0', pixels: Array(16).fill(null).map(() => Array(16).fill(false)), attributes: Array(2).fill(null).map(() => Array(2).fill({ ink: 7, paper: 0, bright: false })) }],
+    frames: [{ id: 'frame0', name: 'frame 0', pixels: Array(16).fill(null).map(() => Array(16).fill(false)), attributes: Array(2).fill(null).map(() => Array(2).fill({ ink: 7, paper: 0, bright: false })) }],
     currentFrameIndex: 0,
     previousFramePixels: null,
     currentTool: 'pencil',

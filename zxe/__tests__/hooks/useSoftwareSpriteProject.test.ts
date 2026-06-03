@@ -468,5 +468,418 @@ describe('useSoftwareSpriteProject', () => {
 
       expect(lastBlobContent).toContain('; Mask: Interleaved (sprite-mask pairs)');
     });
+
+    // Lines 157-190: pre-shifts + separate-blocks interleaving (sprite-only block + separate mask block)
+    it('should export sprite-only block and separate mask block when includePreShifts=true and interleaving=separate-blocks', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true; // set a pixel so there is content
+      const props = createMockProps(16, 16, [frame]);
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: true,
+          includeMask: true,
+          interleaving: 'separate-blocks',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // Should have a separate mask label like frame0_shift0_mask:
+      expect(lastBlobContent).toContain('_shift0_mask:');
+      // shift=0 path: single defb for sprite and single defb for mask
+      // shift>0 path: two defb entries (left, right) for sprite and for mask
+      expect(lastBlobContent).toContain('_shift1_mask:');
+    });
+
+    it('should export shift=0 single-byte sprite entry in separate-blocks mode', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'hero';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: true,
+          includeMask: true,
+          interleaving: 'separate-blocks',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // shift0 mask block label exists
+      expect(lastBlobContent).toContain('hero_frame0_shift0_mask:');
+    });
+
+    // Lines 200-238: no pre-shifts branch
+    it('should export without pre-shifts when includePreShifts=false', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'alien';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: false,
+          includeMask: true,
+          interleaving: 'sprite-mask',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // Should have frame label without shift suffix
+      expect(lastBlobContent).toContain('alien_frame0:');
+      // Should NOT have shift labels
+      expect(lastBlobContent).not.toContain('alien_frame0_shift0:');
+    });
+
+    it('should export interleaved sprite-mask without pre-shifts', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'tank';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: false,
+          includeMask: true,
+          interleaving: 'sprite-mask',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // With interleaved sprite-mask the output contains pairs (mask, sprite) per row
+      expect(lastBlobContent).toContain('tank_frame0:');
+    });
+
+    it('should export separate mask block without pre-shifts when interleaving=separate-blocks', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'bomb';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: false,
+          includeMask: true,
+          interleaving: 'separate-blocks',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // Separate mask block label: frameLabel_mask:
+      expect(lastBlobContent).toContain('bomb_frame0_mask:');
+    });
+
+    it('should export sprite data only when includeMask=false and no pre-shifts', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'coin';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: false,
+          includeMask: false,
+          interleaving: 'separate-blocks',
+          generateLookupTable: false,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      expect(lastBlobContent).toContain('coin_frame0:');
+      // No mask block
+      expect(lastBlobContent).not.toContain('coin_frame0_mask:');
+    });
+
+    // Lines 244-260: generateLookupTable=true
+    it('should generate lookup table when generateLookupTable=true with pre-shifts', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'ghost';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: true,
+          includeMask: true,
+          interleaving: 'sprite-mask',
+          generateLookupTable: true,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // Lookup table labels
+      expect(lastBlobContent).toContain('ghost_frames:');
+      expect(lastBlobContent).toContain('ghost_frame_count: equ 1');
+      // Pre-shifts lookup table
+      expect(lastBlobContent).toContain('ghost_frame0_shifts:');
+      expect(lastBlobContent).toContain('defw ghost_frame0_shift0');
+    });
+
+    it('should generate lookup table when generateLookupTable=true without pre-shifts', () => {
+      const frame = createMockFrame('frame1', 'Frame 1');
+      frame.pixels[0][0] = true;
+      const props = createMockProps(16, 16, [frame]);
+      props.fileName = 'cloud';
+
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      act(() => {
+        result.current.setExportOptions({
+          includePreShifts: false,
+          includeMask: false,
+          interleaving: 'sprite-mask',
+          generateLookupTable: true,
+        });
+      });
+
+      act(() => {
+        result.current.exportASM();
+      });
+
+      // Without pre-shifts frame entry uses frame label (no _shift0)
+      expect(lastBlobContent).toContain('cloud_frames:');
+      expect(lastBlobContent).toContain('defw cloud_frame0');
+      expect(lastBlobContent).toContain('cloud_frame_count: equ 1');
+      // No per-frame shift lookup table
+      expect(lastBlobContent).not.toContain('cloud_frame0_shifts:');
+    });
+  });
+
+  describe('loadProject - additional branches', () => {
+    const makeFileReader = () => {
+      const mockFileReader: {
+        readAsText: jest.Mock;
+        onload: ((event: ProgressEvent<FileReader>) => void) | null;
+      } = {
+        readAsText: jest.fn(),
+        onload: null,
+      };
+      jest.spyOn(global, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader);
+      return mockFileReader;
+    };
+
+    // Lines 351-352: invalid sprite size
+    it('should alert on invalid sprite size in loaded project', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      const mockFileReader = makeFileReader();
+
+      const projectData = {
+        version: 1,
+        type: 'software_sprite',
+        spriteWidth: 99,
+        spriteHeight: 99,
+        frames: [],
+        currentFrameIndex: 0,
+        animationFps: 10,
+        loopAnimation: true,
+      };
+
+      const mockFile = new File([JSON.stringify(projectData)], 'bad.json', { type: 'application/json' });
+      const event = { target: { files: [mockFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => { result.current.loadProject(event); });
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({ target: { result: JSON.stringify(projectData) } } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(global.alert).toHaveBeenCalledWith('Invalid sprite size: 99x99');
+      expect(props.loadProjectData).not.toHaveBeenCalled();
+    });
+
+    // Lines 409-410: no valid frames found
+    it('should alert when loaded project has no valid frames', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      const mockFileReader = makeFileReader();
+
+      const projectData = {
+        version: 1,
+        type: 'software_sprite',
+        spriteWidth: 16,
+        spriteHeight: 16,
+        frames: [], // empty frames array
+        currentFrameIndex: 0,
+        animationFps: 10,
+        loopAnimation: true,
+      };
+
+      const mockFile = new File([JSON.stringify(projectData)], 'noframes.json', { type: 'application/json' });
+      const event = { target: { files: [mockFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => { result.current.loadProject(event); });
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({ target: { result: JSON.stringify(projectData) } } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(global.alert).toHaveBeenCalledWith('No valid frames found in the file.');
+      expect(props.loadProjectData).not.toHaveBeenCalled();
+    });
+
+    // Line 415: exportOptions are loaded from file when present
+    it('should load exportOptions from project file when present', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      const mockFileReader = makeFileReader();
+
+      const projectData = {
+        version: 1,
+        type: 'software_sprite',
+        spriteWidth: 16,
+        spriteHeight: 16,
+        frames: [{
+          id: 'f1',
+          name: 'Frame 1',
+          pixels: Array(16).fill(null).map(() => Array(16).fill(false)),
+          attributes: Array(2).fill(null).map(() =>
+            Array(2).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+          ),
+          duration: 100,
+        }],
+        currentFrameIndex: 0,
+        animationFps: 12,
+        loopAnimation: false,
+        exportOptions: {
+          includePreShifts: false,
+          includeMask: false,
+          interleaving: 'separate-blocks',
+          generateLookupTable: true,
+        },
+      };
+
+      const mockFile = new File([JSON.stringify(projectData)], 'withOptions.json', { type: 'application/json' });
+      const event = { target: { files: [mockFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => { result.current.loadProject(event); });
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({ target: { result: JSON.stringify(projectData) } } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(result.current.exportOptions.includePreShifts).toBe(false);
+      expect(result.current.exportOptions.includeMask).toBe(false);
+      expect(result.current.exportOptions.interleaving).toBe('separate-blocks');
+      expect(result.current.exportOptions.generateLookupTable).toBe(true);
+    });
+
+    // Lines 432-433: JSON parse error
+    it('should alert on malformed JSON in project file', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const props = createMockProps();
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      const mockFileReader = makeFileReader();
+
+      const mockFile = new File(['not valid json {{{'], 'bad.json', { type: 'application/json' });
+      const event = { target: { files: [mockFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => { result.current.loadProject(event); });
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({ target: { result: 'not valid json {{{' } } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      expect(global.alert).toHaveBeenCalledWith('Failed to load sprite file. Make sure it is a valid JSON sprite file.');
+      expect(props.loadProjectData).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    // Line 439: projectInputRef.current.value reset
+    it('should reset the file input value after loading', async () => {
+      const props = createMockProps();
+      const { result } = renderHook(() => useSoftwareSpriteProject(props));
+
+      const mockFileReader = makeFileReader();
+
+      // Attach a fake input element to the ref so the reset path is exercised
+      const fakeInput = document.createElement('input');
+      fakeInput.value = 'some_file.json';
+      Object.defineProperty(result.current.projectInputRef, 'current', {
+        value: fakeInput,
+        writable: true,
+      });
+
+      const projectData = {
+        version: 1,
+        type: 'software_sprite',
+        spriteWidth: 16,
+        spriteHeight: 16,
+        frames: [{
+          id: 'f1',
+          name: 'Frame 1',
+          pixels: Array(16).fill(null).map(() => Array(16).fill(false)),
+          attributes: Array(2).fill(null).map(() =>
+            Array(2).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+          ),
+          duration: 100,
+        }],
+        currentFrameIndex: 0,
+        animationFps: 10,
+        loopAnimation: true,
+      };
+
+      const mockFile = new File([JSON.stringify(projectData)], 'test.json', { type: 'application/json' });
+      const event = { target: { files: [mockFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      act(() => { result.current.loadProject(event); });
+      act(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({ target: { result: JSON.stringify(projectData) } } as unknown as ProgressEvent<FileReader>);
+        }
+      });
+
+      // Input value should have been reset to empty string
+      expect(fakeInput.value).toBe('');
+    });
   });
 });

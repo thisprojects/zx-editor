@@ -294,6 +294,181 @@ describe('SpriteToolbarContent', () => {
     });
   });
 
+  describe('background image controls', () => {
+    it('should call onLoadBackgroundImage when a file is selected', () => {
+      const onLoadBackgroundImage = jest.fn();
+      renderWithProvider(
+        <SpriteToolbarContent {...defaultProps} onLoadBackgroundImage={onLoadBackgroundImage} />
+      );
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const mockFile = new File(['content'], 'bg.png', { type: 'image/png' });
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      expect(onLoadBackgroundImage).toHaveBeenCalledWith(mockFile);
+    });
+
+    it('should NOT call onLoadBackgroundImage when no file is selected', () => {
+      const onLoadBackgroundImage = jest.fn();
+      renderWithProvider(
+        <SpriteToolbarContent {...defaultProps} onLoadBackgroundImage={onLoadBackgroundImage} />
+      );
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(fileInput, { target: { files: [] } });
+
+      expect(onLoadBackgroundImage).not.toHaveBeenCalled();
+    });
+
+    it('should show Enabled toggle when backgroundImage is set', () => {
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent {...defaultProps} backgroundImage={mockImage} />
+      );
+
+      expect(screen.getByText('Enabled')).toBeInTheDocument();
+    });
+
+    it('should NOT show Enabled toggle when backgroundImage is null', () => {
+      renderWithProvider(
+        <SpriteToolbarContent {...defaultProps} backgroundImage={null} />
+      );
+
+      expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
+    });
+
+    it('should call onBackgroundEnabledChange with toggled value when Enabled is clicked', () => {
+      const onBackgroundEnabledChange = jest.fn();
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={false}
+          onBackgroundEnabledChange={onBackgroundEnabledChange}
+        />
+      );
+
+      // The toggle button is next to the "Enabled" span; click the sibling button
+      const enabledLabel = screen.getByText('Enabled');
+      const toggleButton = enabledLabel.closest('div')!.querySelector('button') as HTMLButtonElement;
+      fireEvent.click(toggleButton);
+
+      expect(onBackgroundEnabledChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onBackgroundEnabledChange with false when backgroundEnabled is true', () => {
+      const onBackgroundEnabledChange = jest.fn();
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={true}
+          onBackgroundEnabledChange={onBackgroundEnabledChange}
+        />
+      );
+
+      const enabledLabel = screen.getByText('Enabled');
+      const toggleButton = enabledLabel.closest('div')!.querySelector('button') as HTMLButtonElement;
+      fireEvent.click(toggleButton);
+
+      expect(onBackgroundEnabledChange).toHaveBeenCalledWith(false);
+    });
+
+    it('should show Adjust, Opacity, Scale when backgroundImage and backgroundEnabled are true', () => {
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={true}
+        />
+      );
+
+      expect(screen.getByText('Adjust')).toBeInTheDocument();
+      expect(screen.getByText(/^Opacity:/)).toBeInTheDocument();
+      expect(screen.getByText(/^Scale:/)).toBeInTheDocument();
+    });
+
+    it('should NOT show Adjust, Opacity, Scale when backgroundEnabled is false', () => {
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={false}
+        />
+      );
+
+      expect(screen.queryByText('Adjust')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Opacity:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Scale:/)).not.toBeInTheDocument();
+    });
+
+    it('should call onBackgroundAdjustModeChange when Adjust toggle is clicked', () => {
+      const onBackgroundAdjustModeChange = jest.fn();
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={true}
+          backgroundAdjustMode={false}
+          onBackgroundAdjustModeChange={onBackgroundAdjustModeChange}
+        />
+      );
+
+      const adjustLabel = screen.getByText('Adjust');
+      const toggleButton = adjustLabel.closest('div')!.querySelector('button') as HTMLButtonElement;
+      fireEvent.click(toggleButton);
+
+      expect(onBackgroundAdjustModeChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onBackgroundOpacityChange when opacity slider changes', () => {
+      const onBackgroundOpacityChange = jest.fn();
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={true}
+          backgroundOpacity={0.3}
+          onBackgroundOpacityChange={onBackgroundOpacityChange}
+        />
+      );
+
+      const opacityLabel = screen.getByText(/^Opacity:/);
+      const opacityContainer = opacityLabel.closest('div')!.parentElement!;
+      const slider = opacityContainer.querySelector('input[type="range"]') as HTMLInputElement;
+      fireEvent.change(slider, { target: { value: '50' } });
+
+      expect(onBackgroundOpacityChange).toHaveBeenCalledWith(0.5);
+    });
+
+    it('should call onBackgroundScaleChange when scale slider changes', () => {
+      const onBackgroundScaleChange = jest.fn();
+      const mockImage = new Image();
+      renderWithProvider(
+        <SpriteToolbarContent
+          {...defaultProps}
+          backgroundImage={mockImage}
+          backgroundEnabled={true}
+          backgroundScale={1}
+          onBackgroundScaleChange={onBackgroundScaleChange}
+        />
+      );
+
+      const scaleLabel = screen.getByText(/^Scale:/);
+      const scaleContainer = scaleLabel.closest('div')!.parentElement!;
+      const slider = scaleContainer.querySelector('input[type="range"]') as HTMLInputElement;
+      fireEvent.change(slider, { target: { value: '200' } });
+
+      expect(onBackgroundScaleChange).toHaveBeenCalledWith(2);
+    });
+  });
+
   describe('info tooltips', () => {
     it('should render info icons for tools', () => {
       renderWithProvider(<SpriteToolbarContent {...defaultProps} />);

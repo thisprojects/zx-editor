@@ -590,6 +590,231 @@ describe('useSoftwareSpriteDrawing', () => {
     });
   });
 
+  describe('deleteFrame', () => {
+    // Lines 322-329: deleteFrame
+    it('should delete the current frame when more than one frame exists', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      expect(result.current.frames.length).toBe(2);
+
+      act(() => { result.current.deleteFrame(); });
+
+      expect(result.current.frames.length).toBe(1);
+    });
+
+    it('should not delete when only one frame exists', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+      expect(result.current.frames.length).toBe(1);
+
+      act(() => { result.current.deleteFrame(); });
+
+      expect(result.current.frames.length).toBe(1);
+    });
+
+    it('should adjust currentFrameIndex down when deleting last frame', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.addFrame(); });
+      // now 3 frames, currentFrameIndex should be 2
+      expect(result.current.currentFrameIndex).toBe(2);
+
+      act(() => { result.current.deleteFrame(); });
+
+      // After deleting frame index 2, new last is index 1
+      expect(result.current.frames.length).toBe(2);
+      expect(result.current.currentFrameIndex).toBe(1);
+    });
+
+    it('should not allow deleting while animation is playing', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.togglePlayback(); });
+      expect(result.current.isPlaying).toBe(true);
+
+      act(() => { result.current.deleteFrame(); });
+
+      expect(result.current.frames.length).toBe(2);
+    });
+  });
+
+  describe('reorderFrames', () => {
+    // Lines 334-349: reorderFrames with all index-adjust branches
+    it('should reorder frames by moving fromIndex to toIndex', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.addFrame(); });
+      // 3 frames; rename to identify them
+      act(() => { result.current.renameFrame(0, 'A'); });
+      act(() => { result.current.renameFrame(1, 'B'); });
+      act(() => { result.current.renameFrame(2, 'C'); });
+
+      // Move frame 0 to position 2: A,B,C -> B,C,A
+      act(() => { result.current.reorderFrames(0, 2); });
+
+      expect(result.current.frames[0].name).toBe('B');
+      expect(result.current.frames[1].name).toBe('C');
+      expect(result.current.frames[2].name).toBe('A');
+    });
+
+    it('should update currentFrameIndex when the current frame is moved', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.addFrame(); });
+      // currentFrameIndex is 2 (we added to the end twice)
+      expect(result.current.currentFrameIndex).toBe(2);
+
+      // Move current frame (2) to position 0
+      act(() => { result.current.reorderFrames(2, 0); });
+
+      expect(result.current.currentFrameIndex).toBe(0);
+    });
+
+    it('should decrement currentFrameIndex when a frame before it moves past it', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.addFrame(); });
+      // currentFrameIndex = 2; move frame 0 to position 2 (fromIndex < currentFrameIndex && toIndex >= currentFrameIndex)
+      act(() => { result.current.reorderFrames(0, 2); });
+
+      expect(result.current.currentFrameIndex).toBe(1);
+    });
+
+    it('should increment currentFrameIndex when a frame after it moves before it', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.addFrame(); });
+      // Navigate to frame 1
+      act(() => { result.current.setCurrentFrameIndex(1); });
+      // Move frame 2 to position 0 (fromIndex > currentFrameIndex && toIndex <= currentFrameIndex)
+      act(() => { result.current.reorderFrames(2, 0); });
+
+      expect(result.current.currentFrameIndex).toBe(2);
+    });
+
+    it('should not reorder while playing', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.renameFrame(0, 'A'); });
+      act(() => { result.current.renameFrame(1, 'B'); });
+      act(() => { result.current.togglePlayback(); });
+
+      act(() => { result.current.reorderFrames(0, 1); });
+
+      // Order should be unchanged: A, B
+      expect(result.current.frames[0].name).toBe('A');
+      expect(result.current.frames[1].name).toBe('B');
+    });
+  });
+
+  describe('renameFrame', () => {
+    // Lines 355-358: renameFrame
+    it('should rename a frame by index', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.renameFrame(0, 'Intro'); });
+
+      expect(result.current.frames[0].name).toBe('Intro');
+    });
+
+    it('should rename a specific frame without affecting others', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.renameFrame(0, 'Alpha'); });
+      act(() => { result.current.renameFrame(1, 'Beta'); });
+
+      expect(result.current.frames[0].name).toBe('Alpha');
+      expect(result.current.frames[1].name).toBe('Beta');
+    });
+  });
+
+  describe('setFrameDuration', () => {
+    // Lines 364-367: setFrameDuration
+    it('should update the duration of a frame', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.setFrameDuration(0, 250); });
+
+      expect(result.current.frames[0].duration).toBe(250);
+    });
+
+    it('should update duration without affecting other frame properties', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      act(() => { result.current.renameFrame(0, 'KeyFrame'); });
+      act(() => { result.current.setFrameDuration(0, 500); });
+
+      expect(result.current.frames[0].name).toBe('KeyFrame');
+      expect(result.current.frames[0].duration).toBe(500);
+    });
+  });
+
+  describe('animation playback - loop disabled', () => {
+    // Lines 119-129: loopAnimation=false branch (setIsPlaying(false) at end of frames)
+    it('should stop playing when reaching the last frame with loopAnimation=false', () => {
+      jest.useFakeTimers();
+
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      // Add a second frame so playback can advance
+      act(() => { result.current.addFrame(); });
+      act(() => { result.current.setCurrentFrameIndex(0); });
+
+      // Disable looping
+      act(() => { result.current.setLoopAnimation(false); });
+
+      // Start playback
+      act(() => { result.current.togglePlayback(); });
+      expect(result.current.isPlaying).toBe(true);
+
+      // Advance timer by enough ticks to reach the last frame (2 frames at 10fps = 100ms each)
+      act(() => { jest.advanceTimersByTime(300); });
+
+      expect(result.current.isPlaying).toBe(false);
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('loadBackgroundImage', () => {
+    // Lines 429-431: loadBackgroundImage
+    it('should set backgroundImage after the image loads', () => {
+      const { result } = renderHook(() => useSoftwareSpriteDrawing());
+
+      // Mock URL.createObjectURL (already done in jest.setup.js) and Image
+      let capturedOnload: (() => void) | null = null;
+      const mockImg = {
+        get onload() { return capturedOnload; },
+        set onload(fn: (() => void) | null) { capturedOnload = fn; },
+        src: '',
+      };
+
+      const MockImage = jest.fn(() => mockImg);
+      const OriginalImage = global.Image;
+      (global as unknown as { Image: unknown }).Image = MockImage;
+
+      const fakeFile = new File([''], 'trace.png', { type: 'image/png' });
+
+      act(() => { result.current.loadBackgroundImage(fakeFile); });
+
+      // Image src has been set, simulate load completion
+      act(() => { if (capturedOnload) capturedOnload(); });
+
+      // backgroundImage should now be the mock image object
+      expect(result.current.backgroundImage).toBe(mockImg);
+
+      (global as unknown as { Image: unknown }).Image = OriginalImage;
+    });
+  });
+
   describe('background image state', () => {
     it('should initialize with default background values', () => {
       const { result } = renderHook(() => useSoftwareSpriteDrawing());

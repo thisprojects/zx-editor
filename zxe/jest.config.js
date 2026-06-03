@@ -22,6 +22,7 @@ const customJestConfig = {
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
+  coverageReporters: ['text', 'text-summary'],
   coverageThreshold: {
     global: {
       branches: 80,
