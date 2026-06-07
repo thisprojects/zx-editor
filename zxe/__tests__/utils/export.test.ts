@@ -62,13 +62,7 @@ describe('export utility', () => {
       expect(URL.revokeObjectURL).toHaveBeenCalled();
     });
 
-    it('should include correct header comments in ASM output', () => {
-      let capturedBlob: Blob | null = null;
-      (URL.createObjectURL as jest.Mock).mockImplementation((blob: Blob) => {
-        capturedBlob = blob;
-        return 'mock-url';
-      });
-
+    it('should include correct header comments in ASM output', async () => {
       const pixels: boolean[][] = Array(16).fill(null).map(() => Array(16).fill(false));
       const attributes: Attribute[][] = Array(2).fill(null).map(() =>
         Array(2).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
@@ -82,13 +76,24 @@ describe('export utility', () => {
         height: 2,
       };
 
-      exportASM({ pixels, attributes, bounds, fileName: 'sprite' });
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'sprite' })
+      );
 
-      expect(capturedBlob).not.toBeNull();
-      // We can't easily read the Blob content in Jest, but we verified it was created
+      expect(text).toContain('; ZX Spectrum UDG Sprite Data');
+      expect(text).toContain('; Sprite dimensions: 2x2 characters (16x16 pixels)');
+      expect(text).toContain('; Total characters: 4');
+      expect(text).toContain('; UDG data size: 32 bytes');
+      expect(text).toContain('; Attribute data size: 4 bytes');
+      expect(text).toContain('SPRITE_WIDTH    equ 2');
+      expect(text).toContain('SPRITE_HEIGHT   equ 2');
+      expect(text).toContain('SPRITE_CHARS    equ 4');
+      expect(text).toContain('UDG_BYTES       equ 32');
+      expect(text).toContain('sprite_udg_data:');
+      expect(text).toContain('sprite_attr_data:');
     });
 
-    it('should generate correct UDG data for a simple pattern', () => {
+    it('should generate correct UDG data for a simple pattern', async () => {
       // Create a 1x1 char (8x8 pixels) with top-left pixel set
       const pixels: boolean[][] = Array(8).fill(null).map(() => Array(8).fill(false));
       pixels[0][0] = true; // Top-left pixel = bit 7 of first byte = 0x80
@@ -103,11 +108,15 @@ describe('export utility', () => {
         height: 1,
       };
 
-      const result = exportASM({ pixels, attributes, bounds, fileName: 'test' });
-      expect(result).toBe(true);
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'test' })
+      );
+
+      // Only the top-left pixel is set, so the first byte is $80 and the rest $00
+      expect(text).toContain('defb $80,$00,$00,$00,$00,$00,$00,$00  ; char 0 (row 0, col 0)');
     });
 
-    it('should generate correct attribute byte', () => {
+    it('should generate correct attribute byte', async () => {
       const pixels: boolean[][] = Array(8).fill(null).map(() => Array(8).fill(false));
       pixels[0][0] = true;
 
@@ -123,11 +132,14 @@ describe('export utility', () => {
         height: 1,
       };
 
-      const result = exportASM({ pixels, attributes, bounds, fileName: 'test' });
-      expect(result).toBe(true);
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'test' })
+      );
+
+      expect(text).toContain('defb $6B  ; row 0');
     });
 
-    it('should handle non-bright attribute', () => {
+    it('should handle non-bright attribute', async () => {
       const pixels: boolean[][] = Array(8).fill(null).map(() => Array(8).fill(false));
       pixels[0][0] = true;
 
@@ -143,18 +155,22 @@ describe('export utility', () => {
         height: 1,
       };
 
-      const result = exportASM({ pixels, attributes, bounds, fileName: 'test' });
-      expect(result).toBe(true);
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'test' })
+      );
+
+      expect(text).toContain('defb $07  ; row 0');
     });
 
-    it('should handle bounds not starting at origin', () => {
+    it('should handle bounds not starting at origin', async () => {
       // Create a 3x3 char grid but only export from (1,1) to (1,1)
       const pixels: boolean[][] = Array(24).fill(null).map(() => Array(24).fill(false));
-      // Set pixel in char (1,1) which is pixels (8-15, 8-15)
+      // Set pixel in char (1,1) which is pixels (8-15, 8-15) — its top-left pixel
       pixels[8][8] = true;
 
-      const attributes: Attribute[][] = Array(3).fill(null).map(() =>
-        Array(3).fill(null).map(() => ({ ink: 7, paper: 0, bright: true }))
+      // Distinct attribute per cell so we can confirm the (1,1) cell is the one exported
+      const attributes: Attribute[][] = Array(3).fill(null).map((_, charY) =>
+        Array(3).fill(null).map((_, charX) => ({ ink: charX, paper: charY, bright: false }))
       );
 
       const bounds: DrawBounds = {
@@ -166,11 +182,18 @@ describe('export utility', () => {
         height: 1,
       };
 
-      const result = exportASM({ pixels, attributes, bounds, fileName: 'test' });
-      expect(result).toBe(true);
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'test' })
+      );
+
+      // Exported as char 0 (row 0, col 0) of the output, but its pixel data comes
+      // from source char (1,1) — pixels[8][8] is that char's top-left pixel ($80)
+      expect(text).toContain('defb $80,$00,$00,$00,$00,$00,$00,$00  ; char 0 (row 0, col 0)');
+      // Attribute for source cell (charX=1, charY=1): ink=1, paper=1, bright=false → 0x09
+      expect(text).toContain('defb $09  ; row 0');
     });
 
-    it('should handle maximum allowed UDG chars (21)', () => {
+    it('should handle maximum allowed UDG chars (21)', async () => {
       // 7x3 = 21 chars, which is exactly the max
       const pixels: boolean[][] = Array(24).fill(null).map(() => Array(56).fill(false));
       pixels[0][0] = true;
@@ -188,8 +211,15 @@ describe('export utility', () => {
         height: 3,
       };
 
-      const result = exportASM({ pixels, attributes, bounds, fileName: 'test' });
-      expect(result).toBe(true);
+      const text = await captureBlob(() =>
+        exportASM({ pixels, attributes, bounds, fileName: 'test' })
+      );
+
+      expect(text).toContain('; Total characters: 21');
+      expect(text).toContain('SPRITE_CHARS    equ 21');
+      expect(text).toContain('UDG_BYTES       equ 168');
+      // 21 chars (7x3) means the last one is index 20 at row 2, col 6
+      expect(text).toContain('; char 20 (row 2, col 6)');
     });
 
     it('should use provided fileName in download', () => {
@@ -385,12 +415,23 @@ describe('export utility', () => {
 
     it('encodes a set pixel into the display data', async () => {
       const pixels = makeScreenPixels();
-      pixels[0][0] = true; // top-left pixel → byte 0x80 in first defb
+      pixels[0][0] = true; // top-left pixel → byte 0x80, rest of that row $00
       const text = await captureBlob(() =>
         exportScreenASM({ pixels, attributes: makeScreenAttributes(), fileName: 'test' })
       );
-      // The first display byte should be $80
-      expect(text).toContain('$80');
+      // First row of the display data: byte 0 is $80, the remaining 31 bytes are $00
+      expect(text).toContain(
+        '        defb $80,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00\n        defb $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00'
+      );
+    });
+
+    it('encodes attribute byte for top-left cell into the attribute data', async () => {
+      const attrs = makeScreenAttributes();
+      attrs[0][0] = { ink: 3, paper: 5, bright: true }; // 0x40 | (5<<3) | 3 = 0x6B
+      const text = await captureBlob(() =>
+        exportScreenASM({ pixels: makeScreenPixels(), attributes: attrs, fileName: 'test' })
+      );
+      expect(text).toContain('        defb $6B,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07  ; row 0');
     });
   });
 
@@ -464,18 +505,21 @@ describe('export utility', () => {
       expect(text).toContain('TILE_CHARS      equ 9');
     });
 
-    it('pixel data is encoded correctly', async () => {
+    it('pixel and attribute data are encoded correctly', async () => {
       const pixels = Array.from({ length: 8 }, () => Array(8).fill(false)) as boolean[][];
-      pixels[0][0] = true; // bit 7 of first byte = $80
+      pixels[0][0] = true; // top-left pixel → first byte $80, rest $00
+      // ink=2, paper=6, bright=true → 0x40 | (6<<3) | 2 = 0x72
       const text = await captureBlob(() =>
         exportTileASM({
           tileSize: 8,
           pixels,
-          attributes: [[{ ink: 7, paper: 0, bright: false }]],
+          attributes: [[{ ink: 2, paper: 6, bright: true }]],
           fileName: 'test',
         })
       );
-      expect(text).toContain('$80');
+      // 8x8 tile (totalChars === 1) → no per-char comment on the defb line
+      expect(text).toContain('        defb $80,$00,$00,$00,$00,$00,$00,$00\n');
+      expect(text).toContain('        defb $72\n');
     });
   });
 
@@ -607,7 +651,26 @@ describe('export utility', () => {
           fileName: 'test',
         })
       );
-      expect(text).toContain('$FF');
+      // Every cell of an all-null map row renders as $FF (32 tiles per row at tileSize 8)
+      const emptyRow = Array(32).fill('$FF').join(',');
+      expect(text).toContain(`        defb ${emptyRow}  ; row 0`);
+    });
+
+    it('populated tile slots render the tile index as a hex byte', async () => {
+      const screen = makeScreen('s1', 24, 32);
+      screen.map[0][0] = 5;
+      screen.map[0][1] = 10;
+      const text = await captureBlob(() =>
+        exportLevelASM({
+          tileSize: 8,
+          tileLibrary: [makeTile('grass', 8)],
+          screens: [screen],
+          fileName: 'test',
+        })
+      );
+      // Tile index 5 → $05, tile index 10 → $0A, rest of row stays $FF
+      const restOfRow = Array(30).fill('$FF').join(',');
+      expect(text).toContain(`        defb $05,$0A,${restOfRow}  ; row 0`);
     });
   });
 
