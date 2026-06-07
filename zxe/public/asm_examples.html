@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASM Examples: Displaying Editor Output on Real Z80 Hardware</title>
+<style>
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #e0e0e0;
+    --text-dim: #a0a0b0;
+    --code-bg: #0d1117;
+    --code-border: #30363d;
+    --link: #58a6ff;
+    --heading: #f0f0f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+}
+h1, h2, h3 { color: var(--heading); margin-top: 2.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; border-bottom: 2px solid var(--accent2); padding-bottom: 0.3rem; }
+h3 { font-size: 1.2rem; color: var(--accent); }
+p { margin-bottom: 1rem; }
+ul, ol { margin: 0 0 1rem 1.5rem; }
+li { margin-bottom: 0.3rem; }
+.title-block {
+    text-align: center;
+    padding: 3rem 1rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-radius: 12px;
+    border: 1px solid var(--accent2);
+}
+.title-block h1 { border: none; font-size: 2.5rem; margin-top: 0; }
+.title-block .subtitle { font-size: 1.2rem; color: var(--text-dim); margin-top: 0.5rem; }
+.title-block .assembler { font-size: 0.9rem; color: var(--accent); font-family: monospace; margin-top: 1rem; }
+pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    color: #7ee787;
+}
+pre code { color: #c9d1d9; }
+.comment { color: #8b949e; }
+.keyword { color: #ff7b72; }
+.label { color: #d2a8ff; }
+.string { color: #a5d6ff; }
+.number { color: #79c0ff; }
+.directive { color: #ffa657; }
+.bold-text { font-weight: 700; }
+a { color: var(--link); }
+.back-to-top {
+    display: inline-block;
+    margin-top: 0.3rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+}
+.back-to-top:hover { color: var(--link); }
+section { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--code-border); }
+section:last-child { border-bottom: none; }
+
+/* Layout: sidebar + content */
+.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+.sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.sidebar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--heading);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--accent2);
+}
+.sidebar-toggle:hover { color: var(--link); }
+.sidebar-arrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+}
+.sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+.sidebar-list.open {
+    max-height: 30rem;
+    padding-top: 0.5rem;
+}
+.sidebar-list li { margin: 0; }
+.sidebar-list a {
+    display: block;
+    padding: 0.4rem 0.6rem 0.4rem 1.6rem;
+    border-radius: 4px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.sidebar-list a:hover {
+    background: var(--surface2);
+    color: var(--link);
+}
+.content {
+    flex: 1;
+    min-width: 0;
+    max-width: 900px;
+}
+@media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <button class="sidebar-toggle" id="examples-toggle" aria-expanded="true" aria-controls="examples-list" onclick="toggleExamplesMenu()">
+        <span class="sidebar-arrow" id="examples-arrow">&#9660;</span>
+        Examples
+      </button>
+      <ul class="sidebar-list open" id="examples-list">
+        <li><a href="#udg-example">UDG</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="title-block">
+      <h1>ASM Examples</h1>
+      <div class="subtitle">Displaying Editor Output on Real Z80 Hardware</div>
+      <div class="assembler">by Norbert of Norbsoft</div>
+    </div>
+
+    <section id="introduction">
+      <p>Every editor in NorbSoft's zx-editor can export its work as a ready-to-assemble <code>.asm</code> file — raw <code>defb</code> bytes plus the constants you need to address them. That data is only half the story, though: to actually <em>see</em> it on a Z80 you need a small viewer program that loads the exported data into the right place in memory and tells the ZX Spectrum to draw it.</p>
+      <p>This section collects worked examples — one per editor — that do exactly that. Each example pairs an exported data file with a short viewer program, walks through how the viewer works, and shows you how to assemble and run the pair on an emulator.</p>
+      <p class="bold-text">Every example here is written for Pasmo with the --tapbas flag, producing a .tap file that auto-runs in an emulator such as Fuse with --auto-load — exactly the workflow described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>.</p>
+    </section>
+
+    <section id="udg-example">
+      <h1>UDG: Displaying an Exported Sprite</h1>
+      <a href="#" class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">[Back to top]</a>
+
+      <p>The UDG Sprite Editor exports a sprite as <code>sprite_udg_data</code> (the pixel bytes for each character), <code>sprite_attr_data</code> (one attribute byte per character) and a handful of <code>equ</code> constants describing the sprite&#x27;s dimensions. <code>udg_viewer.asm</code> is a minimal companion program that <code>include</code>s that exported file and stamps the sprite into the centre of the screen by writing pixel and attribute bytes <strong>directly into screen memory</strong> — no ROM calls, so it works identically on a 48K or 128K machine regardless of which ROM is paged in.</p>
+
+      <h2 id="udg-centring">Centring the Sprite</h2>
+      <p>The exported file defines <code>SPRITE_WIDTH</code> and <code>SPRITE_HEIGHT</code> in characters. The viewer uses these, together with the screen&#x27;s 32x24 character grid, to work out where the sprite&#x27;s top-left character cell should land:</p>
+      <pre><code><span class="label">START_COL</span>       <span class="directive">equ</span> (SCREEN_COLS - SPRITE_WIDTH) / 2   <span class="comment">; = 12</span>
+<span class="label">START_ROW</span>       <span class="directive">equ</span> (SCREEN_ROWS - SPRITE_HEIGHT) / 2  <span class="comment">; = 10</span>
+<span class="label">END_COL</span>         <span class="directive">equ</span> START_COL + SPRITE_WIDTH           <span class="comment">; = 19</span></code></pre>
+      <p>Because <code>SPRITE_WIDTH</code> and <code>SPRITE_HEIGHT</code> come from whichever file the <code>include</code> line pulls in, the assembler works these three constants out for you — you never edit them by hand. For the sprite bundled with this example (7 characters wide, 3 tall) they come out to <code>START_COL = 12</code>, <code>START_ROW = 10</code> and <code>END_COL = 19</code>, placing its top-left cell at character column 12, row 10. Export a sprite of your own with different dimensions and the assembled values — and the position it ends up centred at — will be different. <code>END_COL</code> always marks one column past the sprite&#x27;s right edge, which the draw loop uses later to detect when it should wrap to the start of the next character row.</p>
+
+      <h2 id="udg-addressing">Screen Memory Addressing — the &quot;Thirds&quot; Trick</h2>
+      <p>The ZX Spectrum&#x27;s 6144-byte display file is notoriously not laid out row by row. It is split into three <strong>thirds</strong> of 2048 bytes (64 scan lines, or 8 character rows, each), and within a third the scan lines of each character row are interleaved in a fixed bit pattern. Calculating an arbitrary pixel address normally means juggling several groups of bits.</p>
+      <p>The viewer sidesteps almost all of that complexity by relying on one assumption: <strong>the whole sprite fits inside a single third</strong>. For the bundled 3-row-tall sprite, centring it lands it at character rows 10-12 — comfortably inside third 1 (<code>$4800</code>-<code>$4FFF</code>, covering character rows 8-15) — so the address of any pixel byte in the sprite reduces to a simple two-part formula:</p>
+      <ul>
+        <li><strong>High byte</strong> = <code>$48 + scan-line-within-character</code> (0-7)</li>
+        <li><strong>Low byte</strong> = <code>(character row − 8) × 32 + character column</code></li>
+      </ul>
+      <p>That assumption isn&#x27;t a coincidence specific to this one sprite — it holds for <em>any</em> sprite up to 8 character rows tall. Centring a sprite that size or smaller vertically on a 24-row screen always places it entirely within the middle third (rows 8-15), which is why <code>PIXEL_BASE</code> is hard-coded to <code>$48</code>. A taller sprite — possible with a narrow shape such as 2x10 or 1x21, since the editor&#x27;s 21-character limit allows it — would straddle two thirds and need the fuller, bit-juggling general-purpose address calculation that this minimal viewer deliberately doesn&#x27;t attempt.</p>
+      <p>The low byte formula above is no accident — it is also exactly how the linear, 768-byte attribute area at <code>$5800</code> is addressed: <code>$5800 + row × 32 + column</code> can be rewritten as <code>$5900 + (row − 8) × 32 + column</code>, i.e. the <em>same</em> low byte with attribute high byte <code>$59</code> instead of pixel high byte <code>$48</code>. The viewer computes that shared low byte once per character (into <code>C</code>) and reuses it for both the eight pixel-row writes and the single attribute write:</p>
+      <pre><code><span class="label">PIXEL_BASE</span>      <span class="directive">equ</span> $48
+<span class="label">ATTR_BASE</span>       <span class="directive">equ</span> $59
+<span class="label">ROW_OFFSET</span>      <span class="directive">equ</span> START_ROW - 8</code></pre>
+      <p><code>ROW_OFFSET</code> is the sprite&#x27;s top character row expressed as &quot;row within the third&quot;, i.e. <code>character row − 8</code> — the assembler works this out to <code>2</code> for the bundled sprite, but it will differ for a sprite of a different height or screen position. The draw loop counts this value up in register <code>D</code> as it moves down the sprite, so <code>D</code> always holds <code>(character row − 8)</code> directly — no subtraction needed at draw time.</p>
+
+      <h2 id="udg-draw-loop">The Draw Loop</h2>
+      <p>With the addressing worked out, the rest of the program is a straightforward nested loop:</p>
+      <ol>
+        <li><code>IX</code> walks through <code>sprite_udg_data</code> (8 pixel bytes per character) and <code>IY</code> walks through <code>sprite_attr_data</code> (1 byte per character).</li>
+        <li><code>D</code>/<code>E</code> track the current character&#x27;s row-within-third and column. Each pass computes the shared low byte <code>C = D × 32 + E</code> by shifting <code>D</code> left five times and adding <code>E</code>.</li>
+        <li>An inner loop writes the character&#x27;s 8 pixel bytes to <code>($48+0, C)</code> through <code>($48+7, C)</code>, incrementing the high byte <code>H</code> after each write — moving one scan line down the third for every byte.</li>
+        <li>The character&#x27;s attribute byte is then written to <code>($59, C)</code>.</li>
+        <li>Finally <code>E</code> is incremented; once it reaches <code>END_COL</code> it resets to <code>START_COL</code> and <code>D</code> is incremented, moving the &quot;cursor&quot; to the start of the next character row.</li>
+      </ol>
+      <p>The outer loop runs <code>SPRITE_CHARS</code> times — 21 for the bundled sprite, but whatever your own exported file defines — once per character in the sprite, counted down in <code>B</code> via <code>djnz</code>.</p>
+
+      <h2 id="udg-border-flags">Border Flags and the Halt Loop</h2>
+      <p>Two <code>out (254), a</code> calls bracket the drawing work, changing the border colour to give an at-a-glance progress indicator with no text output required: the border turns <strong>red</strong> the instant the program starts running, and <strong>white</strong> once every character has been stamped to the screen. After that the program parks itself in a tight <code>halt</code> / <code>jr halt_loop</code> pair — there is nothing left to do, and <code>halt</code> lets the CPU idle efficiently until the next interrupt.</p>
+
+      <h2 id="udg-exported-data">The Exported Data: udg_7_x_3.asm</h2>
+      <p>Before looking at the viewer, here is the file it <code>include</code>s — the <code>.asm</code> the UDG Sprite Editor&#x27;s <strong>Export ASM</strong> produced for the bundled 7x3-character sprite. This is the same shape of file the editor generates for <em>any</em> sprite you export: a header comment summarising its dimensions, the <code>equ</code> constants the viewer relies on, the raw pixel bytes for each character (<code>sprite_udg_data</code>), and one attribute byte per character (<code>sprite_attr_data</code>).</p>
+      <pre><code><span class="comment">; ZX Spectrum UDG Sprite Data</span>
+<span class="comment">; Generated by ZX Spectrum UDG Editor</span>
+<span class="comment">;</span>
+<span class="comment">; Sprite dimensions: 7x3 characters (56x24 pixels)</span>
+<span class="comment">; Total characters: 21</span>
+<span class="comment">; UDG data size: 168 bytes</span>
+<span class="comment">; Attribute data size: 21 bytes</span>
+
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="comment">; Constants</span>
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="label">SPRITE_WIDTH</span>    <span class="directive">equ</span> 7          <span class="comment">; Width in characters</span>
+<span class="label">SPRITE_HEIGHT</span>   <span class="directive">equ</span> 3          <span class="comment">; Height in characters</span>
+<span class="label">SPRITE_CHARS</span>    <span class="directive">equ</span> 21         <span class="comment">; Total characters</span>
+<span class="label">UDG_BYTES</span>       <span class="directive">equ</span> 168        <span class="comment">; Bytes of UDG pixel data</span>
+<span class="label">FIRST_UDG_CHAR</span>  <span class="directive">equ</span> 144         <span class="comment">; First UDG character code</span>
+
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="comment">; UDG Pixel Data (8 bytes per character, MSB=leftmost pixel)</span>
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="label">sprite_udg_data</span>:
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 0 (row 0, col 0)</span>
+        <span class="directive">defb</span> $10,$10,$10,$10,$10,$10,$10,$10  <span class="comment">; char 1 (row 0, col 1)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 2 (row 0, col 2)</span>
+        <span class="directive">defb</span> $08,$10,$20,$20,$40,$80,$00,$00  <span class="comment">; char 3 (row 0, col 3)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 4 (row 0, col 4)</span>
+        <span class="directive">defb</span> $08,$10,$20,$41,$82,$42,$34,$0C  <span class="comment">; char 5 (row 0, col 5)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 6 (row 0, col 6)</span>
+        <span class="directive">defb</span> $00,$00,$00,$FF,$00,$00,$00,$00  <span class="comment">; char 7 (row 1, col 0)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 8 (row 1, col 1)</span>
+        <span class="directive">defb</span> $00,$3C,$42,$52,$42,$22,$1C,$00  <span class="comment">; char 9 (row 1, col 2)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 10 (row 1, col 3)</span>
+        <span class="directive">defb</span> $10,$10,$10,$FF,$10,$10,$10,$10  <span class="comment">; char 11 (row 1, col 4)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 12 (row 1, col 5)</span>
+        <span class="directive">defb</span> $00,$1C,$62,$42,$22,$22,$1C,$00  <span class="comment">; char 13 (row 1, col 6)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 14 (row 2, col 0)</span>
+        <span class="directive">defb</span> $10,$10,$12,$10,$10,$90,$10,$10  <span class="comment">; char 15 (row 2, col 1)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 16 (row 2, col 2)</span>
+        <span class="directive">defb</span> $81,$42,$24,$18,$18,$24,$42,$81  <span class="comment">; char 17 (row 2, col 3)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 18 (row 2, col 4)</span>
+        <span class="directive">defb</span> $00,$40,$60,$20,$38,$18,$30,$00  <span class="comment">; char 19 (row 2, col 5)</span>
+        <span class="directive">defb</span> $00,$00,$00,$00,$00,$00,$00,$00  <span class="comment">; char 20 (row 2, col 6)</span>
+
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="comment">; Attribute Data (1 byte per character)</span>
+<span class="comment">; Format: FBPPPIII where F=flash, B=bright, P=paper(0-7), I=ink(0-7)</span>
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="label">sprite_attr_data</span>:
+        <span class="directive">defb</span> $0F,$38,$0F,$22,$0F,$2A,$0F  <span class="comment">; row 0</span>
+        <span class="directive">defb</span> $3A,$0F,$22,$0F,$28,$0F,$35  <span class="comment">; row 1</span>
+        <span class="directive">defb</span> $0F,$79,$0F,$27,$0F,$2E,$0F  <span class="comment">; row 2</span></code></pre>
+      <p>Two details worth pointing out: <code>FIRST_UDG_CHAR equ 144</code> is the character code you&#x27;d <code>print</code> through the ROM to place this sprite&#x27;s first character on screen — the viewer below bypasses the ROM entirely and pokes bytes straight into screen memory, so it never touches that constant, but your own programs may well want it. And the trailing <code>; char N (row R, col C)</code> / <code>; row N</code> comments on each <code>defb</code> line are generated purely so a human can find their place in the data; the assembler skips over them, and (as the corrected comments in the viewer below remind us) nothing checks that they stay accurate if the data they describe ever changes.</p>
+
+      <h2 id="udg-source">Source: udg_viewer.asm</h2>
+      <p>This is the complete viewer. Its <code>include</code> line names the exported sprite data file it expects to find alongside it — bundled here as <code>udg_7_x_3.asm</code>, a 7x3-character sprite, simply because that&#x27;s the name this particular export was given. When you export your own sprite from the UDG Sprite Editor it will be saved under whatever filename <em>you</em> choose, so you&#x27;d change this line to match. Whatever it&#x27;s called, that file needs to define <code>SPRITE_WIDTH</code>, <code>SPRITE_HEIGHT</code>, <code>SPRITE_CHARS</code>, <code>sprite_udg_data</code> and <code>sprite_attr_data</code> — exactly what the editor&#x27;s ASM export produces, for any sprite up to the 21-character limit.</p>
+      <pre><code><span class="comment">; udg_viewer.asm</span>
+<span class="comment">;</span>
+<span class="comment">; Displays the 7x3-character UDG sprite from udg_7_x_3.asm centred on</span>
+<span class="comment">; the ZX Spectrum screen (32x24 characters). Pixel and attribute bytes</span>
+<span class="comment">; are written directly to screen memory — no ROM calls, works on 48K</span>
+<span class="comment">; or 128K regardless of which ROM is active.</span>
+<span class="comment">;</span>
+<span class="comment">; Assemble:  pasmo --tapbas udg_viewer.asm udg_viewer.tap</span>
+<span class="comment">; Run:       fuse --auto-load udg_viewer.tap</span>
+
+        <span class="directive">org</span>     <span class="number">$8000</span>
+
+        <span class="directive">include</span> <span class="string">"udg_7_x_3.asm"</span>
+
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="comment">; Layout: centre the SPRITE_WIDTH x SPRITE_HEIGHT sprite on the 32x24</span>
+<span class="comment">; character screen.</span>
+<span class="comment">; -----------------------------------------------------------------------------</span>
+<span class="label">SCREEN_COLS</span>     <span class="directive">equ</span> 32
+<span class="label">SCREEN_ROWS</span>     <span class="directive">equ</span> 24
+<span class="label">START_COL</span>       <span class="directive">equ</span> (SCREEN_COLS - SPRITE_WIDTH) / 2   <span class="comment">; = 12</span>
+<span class="label">START_ROW</span>       <span class="directive">equ</span> (SCREEN_ROWS - SPRITE_HEIGHT) / 2  <span class="comment">; = 10</span>
+<span class="label">END_COL</span>         <span class="directive">equ</span> START_COL + SPRITE_WIDTH           <span class="comment">; = 19</span>
+
+<span class="comment">; The sprite spans character rows START_ROW..START_ROW+2 (10-12), which</span>
+<span class="comment">; fall entirely within screen "third" 1 ($4800-$4FFF). That keeps the</span>
+<span class="comment">; pixel-address arithmetic simple: high byte = $48 + scan line, low byte</span>
+<span class="comment">; = (row - 8) * 32 + column. Attribute memory is linear, so its address</span>
+<span class="comment">; is just $5800 + row*32 + column = $5900 + (row - 8)*32 + column — the</span>
+<span class="comment">; same low byte with a different high byte ($59).</span>
+<span class="label">PIXEL_BASE</span>      <span class="directive">equ</span> $48
+<span class="label">ATTR_BASE</span>       <span class="directive">equ</span> $59
+<span class="label">ROW_OFFSET</span>      <span class="directive">equ</span> START_ROW - 8
+
+<span class="label">start</span>:
+        <span class="comment">; Red border = code is running</span>
+        <span class="keyword">ld</span>      a, 2
+        <span class="keyword">out</span>     (254), a
+
+        <span class="keyword">ld</span>      ix, sprite_udg_data     <span class="comment">; IX -&gt; next character's pixel data</span>
+        <span class="keyword">ld</span>      iy, sprite_attr_data    <span class="comment">; IY -&gt; next character's attribute byte</span>
+        <span class="keyword">ld</span>      d, ROW_OFFSET           <span class="comment">; D = row within third (2..4)</span>
+        <span class="keyword">ld</span>      e, START_COL            <span class="comment">; E = character column (12..18)</span>
+        <span class="keyword">ld</span>      b, SPRITE_CHARS         <span class="comment">; 21 characters to draw</span>
+
+<span class="label">draw_loop</span>:
+        <span class="keyword">push</span>    bc
+
+        <span class="comment">; Low byte of address = (row within third) * 32 + column.</span>
+        <span class="comment">; Shared by the pixel rows (high byte $48+Y) and the attribute</span>
+        <span class="comment">; byte (high byte $59) — see comment above.</span>
+        <span class="keyword">ld</span>      a, d
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a            <span class="comment">; A = D * 32</span>
+        <span class="keyword">add</span>     a, e
+        <span class="keyword">ld</span>      c, a            <span class="comment">; C = low byte (constant for this character)</span>
+
+        <span class="comment">; Stamp the 8 scan lines of this character into screen memory</span>
+        <span class="keyword">ld</span>      b, 8
+        <span class="keyword">ld</span>      h, PIXEL_BASE
+<span class="label">draw_scan</span>:
+        <span class="keyword">ld</span>      l, c
+        <span class="keyword">ld</span>      a, (ix)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     h               <span class="comment">; advance to next scan line</span>
+        <span class="keyword">djnz</span>    draw_scan
+
+        <span class="comment">; Write this character's attribute byte</span>
+        <span class="keyword">ld</span>      h, ATTR_BASE
+        <span class="keyword">ld</span>      l, c
+        <span class="keyword">ld</span>      a, (iy)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     iy
+
+        <span class="comment">; Move to next character position; wrap column back at END_COL</span>
+        <span class="keyword">inc</span>     e
+        <span class="keyword">ld</span>      a, e
+        <span class="keyword">cp</span>      END_COL
+        <span class="keyword">jr</span>      nz, next_char
+        <span class="keyword">ld</span>      e, START_COL
+        <span class="keyword">inc</span>     d
+<span class="label">next_char</span>:
+        <span class="keyword">pop</span>     bc
+        <span class="keyword">djnz</span>    draw_loop
+
+        <span class="comment">; White border = display ready</span>
+        <span class="keyword">ld</span>      a, 7
+        <span class="keyword">out</span>     (254), a
+
+<span class="label">halt_loop</span>:
+        <span class="keyword">halt</span>
+        <span class="keyword">jr</span>      halt_loop
+
+        <span class="directive">end</span>     start</code></pre>
+
+      <h2 id="udg-running">Assembling and Running</h2>
+      <p>To try this with your own sprite: export it from the UDG Sprite Editor, place the resulting <code>.asm</code> file in the same folder as <code>udg_viewer.asm</code>, and edit the <code>include</code> line — currently <code>include "udg_7_x_3.asm"</code>, the name of the sprite bundled with this example — to match whatever filename your export was saved as. Everything else (<code>SPRITE_WIDTH</code>, <code>SPRITE_HEIGHT</code>, <code>SPRITE_CHARS</code> and every constant derived from them) is recalculated automatically by the assembler from your file&#x27;s contents. Then assemble and run it exactly as described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>:</p>
+      <pre><code>pasmo --tapbas udg_viewer.asm udg_viewer.tap &amp;&amp; fuse --tape udg_viewer.tap --auto-load</code></pre>
+      <p>The <code>--tapbas</code> flag wraps the assembled machine code in a small BASIC loader so the resulting <code>.tap</code> auto-runs when loaded; <code>--auto-load</code> tells Fuse to insert and run the tape image immediately on startup. You should see the border flash red, the sprite appear centred on a black screen, and the border settle to white once drawing is complete.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function toggleExamplesMenu() {
+    var list = document.getElementById('examples-list');
+    var btn = document.getElementById('examples-toggle');
+    var arrow = document.getElementById('examples-arrow');
+    var isOpen = list.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    arrow.innerHTML = isOpen ? '&#9660;' : '&#9658;';
+}
+</script>
+
+</body>
+</html>

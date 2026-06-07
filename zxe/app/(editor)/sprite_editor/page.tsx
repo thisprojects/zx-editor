@@ -157,6 +157,11 @@ export default function SpriteEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+        docsLink={{
+          href: '/asm_examples.html#udg-example',
+          description:
+            'the UDG ASM example shows you how to implement the ASM output in Z80 using pasmo with --tapbas and fuse with --auto-load.',
+        }}
       />
 
       {/* Instructions Modal */}

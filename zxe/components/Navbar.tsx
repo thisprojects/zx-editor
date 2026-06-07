@@ -15,6 +15,7 @@ const navItems = [
 
 const docItems = [
   { href: '/z80_book.html', label: 'Z80 Assembly Introduction' },
+  { href: '/asm_examples.html', label: 'ASM Examples' },
 ];
 
 export function Navbar() {

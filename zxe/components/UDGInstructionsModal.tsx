@@ -81,6 +81,22 @@ export function UDGInstructionsModal({ isOpen, onClose }: UDGInstructionsModalPr
               <code className="bg-gray-700 px-1 rounded">include "mysprite.asm"</code> and point the UDG system
               variable (<code className="bg-gray-700 px-1 rounded">23675</code>) at the data.
             </p>
+            <p className="mt-2">
+              Not sure what to do with the exported file?{' '}
+              <a
+                href="/asm_examples.html#udg-example"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                See the UDG ASM example
+              </a>
+              {' '}— it walks through a complete viewer program and shows you how to assemble and run your
+              exported ASM on a Z80 using <code className="bg-gray-700 px-1 rounded">pasmo</code> with{' '}
+              <code className="bg-gray-700 px-1 rounded">--tapbas</code> and{' '}
+              <code className="bg-gray-700 px-1 rounded">fuse</code> with{' '}
+              <code className="bg-gray-700 px-1 rounded">--auto-load</code>.
+            </p>
           </section>
 
         </div>

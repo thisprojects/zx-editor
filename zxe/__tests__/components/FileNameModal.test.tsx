@@ -168,5 +168,56 @@ describe('FileNameModal component', () => {
       const saveButton = screen.getByRole('button', { name: 'Save' });
       expect(saveButton).toHaveClass('bg-blue-600');
     });
+
+    it('should be wide enough to avoid cramped text', () => {
+      render(<FileNameModal {...defaultProps} />);
+      const dialog = screen.getByRole('heading').closest('.bg-gray-800');
+      expect(dialog).toHaveClass('w-[28rem]');
+    });
+  });
+
+  describe('docs link', () => {
+    const docsLink = {
+      href: '/asm_examples.html#udg-example',
+      description: 'the UDG ASM example shows you how to implement the ASM output in Z80.',
+    };
+
+    it('should not show a docs link when action is save', () => {
+      render(<FileNameModal {...defaultProps} action="save" docsLink={docsLink} />);
+      expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show a docs link when action is exportScr', () => {
+      render(<FileNameModal {...defaultProps} action="exportScr" docsLink={docsLink} />);
+      expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show a docs link when action is export but no docsLink is provided', () => {
+      render(<FileNameModal {...defaultProps} action="export" />);
+      expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).not.toBeInTheDocument();
+    });
+
+    it('should show a docs link when action is export and docsLink is provided', () => {
+      render(<FileNameModal {...defaultProps} action="export" docsLink={docsLink} />);
+      expect(screen.getByRole('link', { name: /how do i display this on a z80/i })).toBeInTheDocument();
+    });
+
+    it('should link to the provided href', () => {
+      render(<FileNameModal {...defaultProps} action="export" docsLink={docsLink} />);
+      const link = screen.getByRole('link', { name: /how do i display this on a z80/i });
+      expect(link).toHaveAttribute('href', docsLink.href);
+    });
+
+    it('should open the docs link in a new tab with safe rel attributes', () => {
+      render(<FileNameModal {...defaultProps} action="export" docsLink={docsLink} />);
+      const link = screen.getByRole('link', { name: /how do i display this on a z80/i });
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('should show the provided description text alongside the link', () => {
+      render(<FileNameModal {...defaultProps} action="export" docsLink={docsLink} />);
+      expect(screen.getByText(new RegExp(docsLink.description))).toBeInTheDocument();
+    });
   });
 });
