@@ -8,8 +8,8 @@ const html = fs.readFileSync(
 
 describe('asm_examples.html', () => {
   describe('page structure', () => {
-    it('has a top-level ASM Examples heading', () => {
-      expect(html).toMatch(/<h1>ASM Examples<\/h1>/);
+    it('has a top-level UDG ASM Example heading', () => {
+      expect(html).toMatch(/<h1>UDG ASM Example<\/h1>/);
     });
 
     it('has an introduction section explaining the page', () => {
@@ -21,9 +21,39 @@ describe('asm_examples.html', () => {
       expect(html).toContain('href="/z80_book.html"');
     });
 
-    it('has a UDG example section with an anchor target matching the docs link', () => {
+    it('has a UDG example section', () => {
       expect(html).toMatch(/<section id="udg-example">/);
       expect(html).toMatch(/<h1>UDG: Displaying an Exported Sprite<\/h1>/);
+    });
+
+    it('does not contain the player sprite section', () => {
+      expect(html).not.toContain('id="player-example"');
+    });
+  });
+
+  describe('sidebar navigation', () => {
+    it('links to asm_examples.html for the UDG page', () => {
+      expect(html).toContain('<a href="/asm_examples.html">UDG</a>');
+    });
+
+    it('links to player_sprite_examples.html for the Player Sprite page', () => {
+      expect(html).toContain('<a href="/player_sprite_examples.html">Player Sprite</a>');
+    });
+
+    it('does not use anchor links for sidebar navigation', () => {
+      expect(html).not.toContain('href="#udg-example"');
+      expect(html).not.toContain('href="#player-example"');
+    });
+
+    it('renders the collapsible examples menu controls', () => {
+      expect(html).toContain('id="examples-toggle"');
+      expect(html).toContain('id="examples-list"');
+      expect(html).toContain('toggleExamplesMenu');
+    });
+
+    it('defines the toggleExamplesMenu script that flips aria-expanded and the arrow glyph', () => {
+      expect(html).toMatch(/function toggleExamplesMenu\(\)/);
+      expect(html).toContain("btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false')");
     });
   });
 
@@ -134,16 +164,5 @@ describe('asm_examples.html', () => {
     });
   });
 
-  describe('sidebar navigation', () => {
-    it('renders the collapsible examples menu controls', () => {
-      expect(html).toContain('id="examples-toggle"');
-      expect(html).toContain('id="examples-list"');
-      expect(html).toContain('toggleExamplesMenu');
-    });
-
-    it('defines the toggleExamplesMenu script that flips aria-expanded and the arrow glyph', () => {
-      expect(html).toMatch(/function toggleExamplesMenu\(\)/);
-      expect(html).toContain("btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false')");
-    });
-  });
 });
+

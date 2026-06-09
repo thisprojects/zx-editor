@@ -84,7 +84,7 @@ export function UDGInstructionsModal({ isOpen, onClose }: UDGInstructionsModalPr
             <p className="mt-2">
               Not sure what to do with the exported file?{' '}
               <a
-                href="/asm_examples.html#udg-example"
+                href="/asm_examples.html"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 underline"

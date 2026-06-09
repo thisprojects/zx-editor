@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ASM Examples: Displaying Editor Output on Real Z80 Hardware</title>
+<title>UDG ASM Example: Displaying Exported Sprite Data on Z80 Hardware</title>
 <style>
 :root {
     --bg: #1a1a2e;
@@ -166,7 +166,8 @@ section:last-child { border-bottom: none; }
         Examples
       </button>
       <ul class="sidebar-list open" id="examples-list">
-        <li><a href="#udg-example">UDG</a></li>
+        <li><a href="/asm_examples.html">UDG</a></li>
+        <li><a href="/player_sprite_examples.html">Player Sprite</a></li>
       </ul>
     </div>
   </aside>
@@ -174,8 +175,8 @@ section:last-child { border-bottom: none; }
   <main class="content">
 
     <div class="title-block">
-      <h1>ASM Examples</h1>
-      <div class="subtitle">Displaying Editor Output on Real Z80 Hardware</div>
+      <h1>UDG ASM Example</h1>
+      <div class="subtitle">Displaying Exported Sprite Data on Real Z80 Hardware</div>
       <div class="assembler">by Norbert of Norbsoft</div>
     </div>
 
@@ -387,6 +388,8 @@ section:last-child { border-bottom: none; }
       <pre><code>pasmo --tapbas udg_viewer.asm udg_viewer.tap &amp;&amp; fuse --tape udg_viewer.tap --auto-load</code></pre>
       <p>The <code>--tapbas</code> flag wraps the assembled machine code in a small BASIC loader so the resulting <code>.tap</code> auto-runs when loaded; <code>--auto-load</code> tells Fuse to insert and run the tape image immediately on startup. You should see the border flash red, the sprite appear centred on a black screen, and the border settle to white once drawing is complete.</p>
     </section>
+
+
 
   </main>
 </div>

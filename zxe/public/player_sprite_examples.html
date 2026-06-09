@@ -1,0 +1,2925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Sprite ASM Example: Animating Exported Data on Z80 Hardware</title>
+<style>
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #e0e0e0;
+    --text-dim: #a0a0b0;
+    --code-bg: #0d1117;
+    --code-border: #30363d;
+    --link: #58a6ff;
+    --heading: #f0f0f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+}
+h1, h2, h3 { color: var(--heading); margin-top: 2.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; border-bottom: 2px solid var(--accent2); padding-bottom: 0.3rem; }
+h3 { font-size: 1.2rem; color: var(--accent); }
+p { margin-bottom: 1rem; }
+ul, ol { margin: 0 0 1rem 1.5rem; }
+li { margin-bottom: 0.3rem; }
+.title-block {
+    text-align: center;
+    padding: 3rem 1rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-radius: 12px;
+    border: 1px solid var(--accent2);
+}
+.title-block h1 { border: none; font-size: 2.5rem; margin-top: 0; }
+.title-block .subtitle { font-size: 1.2rem; color: var(--text-dim); margin-top: 0.5rem; }
+.title-block .assembler { font-size: 0.9rem; color: var(--accent); font-family: monospace; margin-top: 1rem; }
+pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    color: #7ee787;
+}
+pre code { color: #c9d1d9; }
+.comment { color: #8b949e; }
+.keyword { color: #ff7b72; }
+.label { color: #d2a8ff; }
+.string { color: #a5d6ff; }
+.number { color: #79c0ff; }
+.directive { color: #ffa657; }
+.bold-text { font-weight: 700; }
+a { color: var(--link); }
+.back-to-top {
+    display: inline-block;
+    margin-top: 0.3rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+}
+.back-to-top:hover { color: var(--link); }
+section { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--code-border); }
+section:last-child { border-bottom: none; }
+
+/* Layout: sidebar + content */
+.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+.sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.sidebar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--heading);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--accent2);
+}
+.sidebar-toggle:hover { color: var(--link); }
+.sidebar-arrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+}
+.sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+.sidebar-list.open {
+    max-height: 30rem;
+    padding-top: 0.5rem;
+}
+.sidebar-list li { margin: 0; }
+.sidebar-list a {
+    display: block;
+    padding: 0.4rem 0.6rem 0.4rem 1.6rem;
+    border-radius: 4px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.sidebar-list a:hover {
+    background: var(--surface2);
+    color: var(--link);
+}
+.content {
+    flex: 1;
+    min-width: 0;
+    max-width: 900px;
+}
+@media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <button class="sidebar-toggle" id="examples-toggle" aria-expanded="true" aria-controls="examples-list" onclick="toggleExamplesMenu()">
+        <span class="sidebar-arrow" id="examples-arrow">&#9660;</span>
+        Examples
+      </button>
+      <ul class="sidebar-list open" id="examples-list">
+        <li><a href="/asm_examples.html">UDG</a></li>
+        <li><a href="/player_sprite_examples.html">Player Sprite</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="title-block">
+      <h1>Player Sprite ASM Example</h1>
+      <div class="subtitle">Animating &amp; Displaying Exported Sprite Data on Real Z80 Hardware</div>
+      <div class="assembler">by Norbert of Norbsoft</div>
+    </div>
+
+    <section id="introduction">
+      <p>This example pairs the exported <code>mr_soft_sprite.asm</code> data file with a short demo program that bounces the sprite across the screen on real Z80 hardware. See also the <a href="/asm_examples.html">UDG ASM Example</a> and the <a href="/z80_book.html">Z80 Assembly Introduction</a> for the assembly workflow used here.</p>
+    </section>
+
+    <section id="player-example">
+      <h1>Player Sprite: Animating a Software Sprite</h1>
+      <a href="#" class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">[Back to top]</a>
+
+      <p>The Player Sprite Editor exports a sprite as a set of labelled <code>defb</code> blocks &mdash; one block per animation frame and per pre-shift level &mdash; together with address lookup tables and an attribute record. <code>mr_soft_demo.asm</code> is a companion program that <code>include</code>s that exported file and animates the sprite across the middle of the screen: it bounces left and right at 50&nbsp;Hz, cycles through five walk-cycle frames, and uses interleaved mask/sprite bytes to composite the character over the background without leaving a black rectangle behind it.</p>
+
+      <h2 id="player-exported">The Exported Data: mr_soft_sprite.asm</h2>
+      <p>The sprite bundled with this example is 16&times;24 pixels (2&times;3 character cells), has 5 animation frames, and is pre-shifted at all 8 sub-character positions (pixel offsets 0&ndash;7). Label names follow the convention <code>mr_soft_frameN_shiftM</code>: <em>N</em> is the animation frame (0&ndash;4), <em>M</em> is the pixel shift (0&ndash;7).</p>
+      <p><strong class="bold-text">Mask format is interleaved:</strong> each sprite byte is immediately preceded by its mask byte, giving the in-memory sequence <code>mask, sprite, mask, sprite, &hellip;</code>. A single advancing <code>IX</code> pointer consumes both values without maintaining a separate mask pointer.</p>
+      <p>The byte layout differs between shift 0 and shifts 1&ndash;7, because only a shifted sprite spills into a third screen character column:</p>
+      <ul>
+        <li><strong>Shift 0</strong> &mdash; the sprite lands exactly on a character boundary and occupies exactly 2 screen columns. Each column section holds 24 mask/sprite <em>pairs</em> (48&nbsp;bytes), one pair per scan line.</li>
+        <li><strong>Shifts 1&ndash;7</strong> &mdash; the shifted sprite spills into a third screen column. Each column section holds 24 mask/sprite <em>quads</em> (96&nbsp;bytes): <code>mask_left, sprite_left, mask_right, sprite_right</code> per scan line, covering two consecutive screen character columns in a single pass.</li>
+      </ul>
+      <pre><code><span class="comment">; Software Sprite Export</span>
+<span class="comment">; Size: 16×24 (2x3 chars)</span>
+<span class="comment">; Frames: 5</span>
+<span class="comment">; Pre-shifts: 8 (0-7 pixels)</span>
+<span class="comment">; Mask: Interleaved (sprite-mask pairs)</span>
+
+<span class="label">mr_soft_frame0_shift0</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $f2, $0d
+    <span class="directive">defb</span> $f6, $09
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $fb, $04
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $fb, $04
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $fb, $04
+
+<span class="label">mr_soft_frame0_shift1</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $7f, $80
+    <span class="directive">defb</span> $fb, $04, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+
+<span class="label">mr_soft_frame0_shift2</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $bf, $40
+    <span class="directive">defb</span> $fd, $02, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+
+<span class="label">mr_soft_frame0_shift3</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $5f, $a0
+    <span class="directive">defb</span> $fe, $01, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+
+<span class="label">mr_soft_frame0_shift4</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $2f, $d0
+    <span class="directive">defb</span> $ff, $00, $6f, $90
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+
+<span class="label">mr_soft_frame0_shift5</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $97, $68
+    <span class="directive">defb</span> $ff, $00, $b7, $48
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $df, $20
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+
+<span class="label">mr_soft_frame0_shift6</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $cb, $34
+    <span class="directive">defb</span> $ff, $00, $db, $24
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+
+<span class="label">mr_soft_frame0_shift7</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $e5, $1a
+    <span class="directive">defb</span> $ff, $00, $ed, $12
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+
+<span class="label">mr_soft_frame1_shift0</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $f2, $0d
+    <span class="directive">defb</span> $ce, $31
+    <span class="directive">defb</span> $de, $21
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $e3, $1c
+    <span class="directive">defb</span> $8f, $70
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $9f, $60
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $1f, $e0
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $e7, $18
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $8f, $70
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $e7, $18
+
+<span class="label">mr_soft_frame1_shift1</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $7f, $80
+    <span class="directive">defb</span> $e7, $18, $7f, $80
+    <span class="directive">defb</span> $ef, $10, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $8f, $70, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+
+<span class="label">mr_soft_frame1_shift2</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $bf, $40
+    <span class="directive">defb</span> $f3, $0c, $bf, $40
+    <span class="directive">defb</span> $f7, $08, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+
+<span class="label">mr_soft_frame1_shift3</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $5f, $a0
+    <span class="directive">defb</span> $f9, $06, $df, $20
+    <span class="directive">defb</span> $fb, $04, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+
+<span class="label">mr_soft_frame1_shift4</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $2f, $d0
+    <span class="directive">defb</span> $fc, $03, $ef, $10
+    <span class="directive">defb</span> $fd, $02, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+
+<span class="label">mr_soft_frame1_shift5</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $97, $68
+    <span class="directive">defb</span> $fe, $01, $77, $88
+    <span class="directive">defb</span> $fe, $01, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+
+<span class="label">mr_soft_frame1_shift6</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $cb, $34
+    <span class="directive">defb</span> $ff, $00, $3b, $c4
+    <span class="directive">defb</span> $ff, $00, $7b, $84
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+
+<span class="label">mr_soft_frame1_shift7</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $e5, $1a
+    <span class="directive">defb</span> $ff, $00, $9d, $62
+    <span class="directive">defb</span> $ff, $00, $bd, $42
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+
+<span class="label">mr_soft_frame2_shift0</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $fb, $04
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f1, $0e
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $f0, $0f
+    <span class="directive">defb</span> $e6, $19
+    <span class="directive">defb</span> $ee, $11
+    <span class="directive">defb</span> $fe, $01
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $3f, $c0
+
+<span class="label">mr_soft_frame2_shift1</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $f8, $07, $7f, $80
+    <span class="directive">defb</span> $f3, $0c, $7f, $80
+    <span class="directive">defb</span> $f7, $08, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+
+<span class="label">mr_soft_frame2_shift2</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $fc, $03, $3f, $c0
+    <span class="directive">defb</span> $f9, $06, $bf, $40
+    <span class="directive">defb</span> $fb, $04, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+
+<span class="label">mr_soft_frame2_shift3</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $fe, $01, $1f, $e0
+    <span class="directive">defb</span> $fc, $03, $df, $20
+    <span class="directive">defb</span> $fd, $02, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+
+<span class="label">mr_soft_frame2_shift4</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $0f, $f0
+    <span class="directive">defb</span> $fe, $01, $6f, $90
+    <span class="directive">defb</span> $fe, $01, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+
+<span class="label">mr_soft_frame2_shift5</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $87, $78
+    <span class="directive">defb</span> $ff, $00, $37, $c8
+    <span class="directive">defb</span> $ff, $00, $77, $88
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+
+<span class="label">mr_soft_frame2_shift6</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $c3, $3c
+    <span class="directive">defb</span> $ff, $00, $9b, $64
+    <span class="directive">defb</span> $ff, $00, $bb, $44
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+
+<span class="label">mr_soft_frame2_shift7</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $e1, $1e
+    <span class="directive">defb</span> $ff, $00, $cd, $32
+    <span class="directive">defb</span> $ff, $00, $dd, $22
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+
+<span class="label">mr_soft_frame3_shift0</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $f2, $0d
+    <span class="directive">defb</span> $f2, $0d
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $fb, $04
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $e7, $18
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $c3, $3c
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $1f, $e0
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $ef, $10
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $8f, $70
+    <span class="directive">defb</span> $ff, $00
+
+<span class="label">mr_soft_frame3_shift1</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e1, $1e, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $8f, $70, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift2</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $fc, $03, $bf, $40
+    <span class="directive">defb</span> $fc, $03, $bf, $40
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f0, $0f, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift3</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $fe, $01, $5f, $a0
+    <span class="directive">defb</span> $fe, $01, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $7f, $80
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift4</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $2f, $d0
+    <span class="directive">defb</span> $ff, $00, $2f, $d0
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $3f, $c0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift5</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $97, $68
+    <span class="directive">defb</span> $ff, $00, $97, $68
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $1f, $e0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift6</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $cb, $34
+    <span class="directive">defb</span> $ff, $00, $cb, $34
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $0f, $f0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame3_shift7</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $e5, $1a
+    <span class="directive">defb</span> $ff, $00, $e5, $1a
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $87, $78
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+
+<span class="label">mr_soft_frame4_shift0</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f3, $0c
+    <span class="directive">defb</span> $fb, $04
+    <span class="directive">defb</span> $f8, $07
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $fa, $05
+    <span class="directive">defb</span> $f2, $0d
+    <span class="directive">defb</span> $f6, $09
+    <span class="directive">defb</span> $fe, $01
+    <span class="directive">defb</span> $fc, $03
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $fd, $02
+    <span class="directive">defb</span> $f9, $06
+    <span class="directive">defb</span> $e3, $1c
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $87, $78
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $1f, $e0
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $df, $20
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $8f, $70
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $3f, $c0
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $e7, $18
+    <span class="directive">defb</span> $ff, $00
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $7f, $80
+    <span class="directive">defb</span> $bf, $40
+    <span class="directive">defb</span> $9f, $60
+    <span class="directive">defb</span> $cf, $30
+    <span class="directive">defb</span> $e7, $18
+    <span class="directive">defb</span> $f7, $08
+    <span class="directive">defb</span> $f1, $0e
+    <span class="directive">defb</span> $fb, $04
+
+<span class="label">mr_soft_frame4_shift1</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $fd, $02, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $7f, $80
+    <span class="directive">defb</span> $fb, $04, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $c3, $3c, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $8f, $70, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $9f, $60, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $bf, $40, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+
+<span class="label">mr_soft_frame4_shift2</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $fe, $01, $bf, $40
+    <span class="directive">defb</span> $fc, $03, $bf, $40
+    <span class="directive">defb</span> $fd, $02, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $e1, $1e, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $c7, $38, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $cf, $30, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $df, $20, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+
+<span class="label">mr_soft_frame4_shift3</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $ff, $00, $5f, $a0
+    <span class="directive">defb</span> $fe, $01, $5f, $a0
+    <span class="directive">defb</span> $fe, $01, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f0, $0f, $ff, $00
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e3, $1c, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $e7, $18, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $ef, $10, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+
+<span class="label">mr_soft_frame4_shift4</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $af, $50
+    <span class="directive">defb</span> $ff, $00, $2f, $d0
+    <span class="directive">defb</span> $ff, $00, $6f, $90
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $7f, $80
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f1, $0e, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $f3, $0c, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $f7, $08, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+
+<span class="label">mr_soft_frame4_shift5</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $d7, $28
+    <span class="directive">defb</span> $ff, $00, $97, $68
+    <span class="directive">defb</span> $ff, $00, $b7, $48
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $3f, $c0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f8, $07, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $f9, $06, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fb, $04, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $df, $20
+
+<span class="label">mr_soft_frame4_shift6</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $eb, $14
+    <span class="directive">defb</span> $ff, $00, $cb, $34
+    <span class="directive">defb</span> $ff, $00, $db, $24
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $8f, $70
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $1f, $e0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $fc, $03, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fd, $02, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $df, $20
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+
+<span class="label">mr_soft_frame4_shift7</span>:
+<span class="comment">; Column 0</span>
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e7, $18
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+    <span class="directive">defb</span> $ff, $00, $f1, $0e
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $f5, $0a
+    <span class="directive">defb</span> $ff, $00, $e5, $1a
+    <span class="directive">defb</span> $ff, $00, $ed, $12
+    <span class="directive">defb</span> $ff, $00, $fd, $02
+    <span class="directive">defb</span> $ff, $00, $f9, $06
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $fb, $04
+    <span class="directive">defb</span> $ff, $00, $f3, $0c
+    <span class="directive">defb</span> $ff, $00, $c7, $38
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $0f, $f0
+<span class="comment">; Column 1</span>
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $bf, $40
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $1f, $e0
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $fe, $01, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $fe, $01, $ff, $00
+    <span class="directive">defb</span> $ff, $00, $7f, $80
+    <span class="directive">defb</span> $ff, $00, $3f, $c0
+    <span class="directive">defb</span> $ff, $00, $9f, $60
+    <span class="directive">defb</span> $ff, $00, $cf, $30
+    <span class="directive">defb</span> $ff, $00, $ef, $10
+    <span class="directive">defb</span> $ff, $00, $e3, $1c
+    <span class="directive">defb</span> $ff, $00, $f7, $08
+
+<span class="label">mr_soft_frames</span>:
+    <span class="directive">defw</span> mr_soft_frame0_shift0
+    <span class="directive">defw</span> mr_soft_frame1_shift0
+    <span class="directive">defw</span> mr_soft_frame2_shift0
+    <span class="directive">defw</span> mr_soft_frame3_shift0
+    <span class="directive">defw</span> mr_soft_frame4_shift0
+<span class="label">mr_soft_frame_count</span>: <span class="directive">equ</span> 5
+
+<span class="label">mr_soft_frame0_shifts</span>:
+    <span class="directive">defw</span> mr_soft_frame0_shift0
+    <span class="directive">defw</span> mr_soft_frame0_shift1
+    <span class="directive">defw</span> mr_soft_frame0_shift2
+    <span class="directive">defw</span> mr_soft_frame0_shift3
+    <span class="directive">defw</span> mr_soft_frame0_shift4
+    <span class="directive">defw</span> mr_soft_frame0_shift5
+    <span class="directive">defw</span> mr_soft_frame0_shift6
+    <span class="directive">defw</span> mr_soft_frame0_shift7
+<span class="label">mr_soft_frame1_shifts</span>:
+    <span class="directive">defw</span> mr_soft_frame1_shift0
+    <span class="directive">defw</span> mr_soft_frame1_shift1
+    <span class="directive">defw</span> mr_soft_frame1_shift2
+    <span class="directive">defw</span> mr_soft_frame1_shift3
+    <span class="directive">defw</span> mr_soft_frame1_shift4
+    <span class="directive">defw</span> mr_soft_frame1_shift5
+    <span class="directive">defw</span> mr_soft_frame1_shift6
+    <span class="directive">defw</span> mr_soft_frame1_shift7
+<span class="label">mr_soft_frame2_shifts</span>:
+    <span class="directive">defw</span> mr_soft_frame2_shift0
+    <span class="directive">defw</span> mr_soft_frame2_shift1
+    <span class="directive">defw</span> mr_soft_frame2_shift2
+    <span class="directive">defw</span> mr_soft_frame2_shift3
+    <span class="directive">defw</span> mr_soft_frame2_shift4
+    <span class="directive">defw</span> mr_soft_frame2_shift5
+    <span class="directive">defw</span> mr_soft_frame2_shift6
+    <span class="directive">defw</span> mr_soft_frame2_shift7
+<span class="label">mr_soft_frame3_shifts</span>:
+    <span class="directive">defw</span> mr_soft_frame3_shift0
+    <span class="directive">defw</span> mr_soft_frame3_shift1
+    <span class="directive">defw</span> mr_soft_frame3_shift2
+    <span class="directive">defw</span> mr_soft_frame3_shift3
+    <span class="directive">defw</span> mr_soft_frame3_shift4
+    <span class="directive">defw</span> mr_soft_frame3_shift5
+    <span class="directive">defw</span> mr_soft_frame3_shift6
+    <span class="directive">defw</span> mr_soft_frame3_shift7
+<span class="label">mr_soft_frame4_shifts</span>:
+    <span class="directive">defw</span> mr_soft_frame4_shift0
+    <span class="directive">defw</span> mr_soft_frame4_shift1
+    <span class="directive">defw</span> mr_soft_frame4_shift2
+    <span class="directive">defw</span> mr_soft_frame4_shift3
+    <span class="directive">defw</span> mr_soft_frame4_shift4
+    <span class="directive">defw</span> mr_soft_frame4_shift5
+    <span class="directive">defw</span> mr_soft_frame4_shift6
+    <span class="directive">defw</span> mr_soft_frame4_shift7
+
+<span class="label">mr_soft_attr</span>:
+    <span class="directive">defb</span> $47, $47
+    <span class="directive">defb</span> $47, $47
+    <span class="directive">defb</span> $47, $47</code></pre>
+      <p>Each shifts table is exactly 16 bytes (8 &times; 2), and all five frame tables are contiguous in memory immediately following the pixel data. This contiguous layout is what lets <code>DRAW_SPRITE</code> locate any frame/shift combination with a single multiply-by-16 and a table dereference &mdash; no division or pointer-of-pointers indirection required.</p>
+      <p><code>mr_soft_attr</code> holds the attribute bytes recorded when the sprite was exported (white paper, black ink, bright in this case). The demo applies a uniform colour scheme to the entire screen at startup and does not use these bytes at runtime &mdash; they are preserved in the export so that programs that do set per-character-cell colours can read them directly.</p>
+
+      <h2 id="player-masks">Masks and the AND/OR Blit</h2>
+      <p>A mask byte has a <strong>0</strong> bit wherever the sprite is opaque and a <strong>1</strong> bit wherever it is transparent. Before writing any sprite byte into screen memory the blitter applies:</p>
+      <pre><code>new_screen_byte = (old_screen_byte AND mask) OR sprite_byte</code></pre>
+      <p>The AND step clears the pixels the sprite is about to fill; the OR step stamps the sprite&#x27;s set pixels on top. Background pixels behind transparent (mask&nbsp;=&nbsp;1) positions are preserved, so the character composites cleanly over whatever was already drawn without blacking out a rectangle around it. Because the demo erases the sprite&#x27;s screen columns to a known background before each draw, the two-pass blit used for shifts 1&ndash;7 composes correctly: the first pass writes onto clean memory, and the second pass ANDs and ORs on top without artefacts.</p>
+
+      <h2 id="player-addressing">Screen Memory Addressing</h2>
+      <p>The demo places the sprite at character row 8, so its three character rows (8, 9, 10) lie entirely within the middle screen <strong>third</strong> ($4800&ndash;$4FFF, covering character rows 8&ndash;15). Staying within one third removes the need for the full ZX Spectrum bit-juggling address formula.</p>
+      <p>The pixel address for scan line <em>S</em> (0&ndash;7 within a character row) at character row <em>R</em>, column <em>C</em> is:</p>
+      <ul>
+        <li><strong>High byte</strong>: <code>$48 + S</code> &mdash; adding 1 to the high byte steps down one scan line within the same row</li>
+        <li><strong>Low byte</strong>: <code>(R &minus; 8) &times; 32 + C</code> &mdash; the row&#x27;s offset within the third, plus the column</li>
+      </ul>
+      <p>Each of the three character rows therefore has a fixed low-byte base:</p>
+      <pre><code><span class="label">char row 8</span>:   <span class="comment">low-byte base = $00 + C  (row_in_third = 0, pixel base $4800)</span>
+<span class="label">char row 9</span>:   <span class="comment">low-byte base = $20 + C  (row_in_third = 1, pixel base $4820)</span>
+<span class="label">char row 10</span>:  <span class="comment">low-byte base = $40 + C  (row_in_third = 2, pixel base $4840)</span></code></pre>
+      <p>After writing all 8 scan lines of a character row, the blitter resets the high byte back to <code>$48</code> and adds <code>$20</code> or <code>$40</code> to the low-byte base for the next row. Attribute memory at <code>$5800</code> is linear, so the attribute address for row <em>R</em>, column <em>C</em> is <code>$5900 + (R &minus; 8) &times; 32 + C</code> &mdash; the same low byte, different high byte.</p>
+
+      <h2 id="player-blitters">Pre-shifted Data and the Two Blitters</h2>
+      <p>A 16-pixel-wide sprite can appear at any of 256 horizontal pixel positions, so its left edge can land at any of 8 offsets (0&ndash;7) within its character column. Choosing the pre-shifted variant whose built-in shift matches <code>sprite_x AND 7</code> at draw time avoids an 8-step software shift loop on every frame &mdash; the work is done once, at export time.</p>
+      <p>Two helper routines handle the two data shapes:</p>
+      <p><strong class="bold-text">BLIT_PAIR_SECTION</strong> (shift 0): blits 24 scan lines of mask/sprite pairs from <code>IX</code> into a single screen character column <code>C</code>. It processes the 8 scan lines of character row 8, then row 9, then row 10 in order, resetting the pixel high byte to <code>$48</code> between rows and recomputing the low-byte offset. <code>IX</code> advances by 2 per scan line (48 bytes total per call). <code>DRAW_SPRITE</code> calls it twice: once for the col-0 data section (screen column <code>draw_col</code>), then once for the col-1 data section (screen column <code>draw_col + 1</code>).</p>
+      <p><strong class="bold-text">BLIT_QUAD_SECTION</strong> (shifts 1&ndash;7): blits 24 quads from <code>IX</code> into two consecutive screen character columns per scan line. For each scan line it writes <code>(ix+0)</code>/<code>(ix+1)</code> to column <code>C</code> and <code>(ix+2)</code>/<code>(ix+3)</code> to column <code>C+1</code>, keeping all four data accesses sequential in memory. <code>IX</code> advances by 4 per scan line (96 bytes total per call). <code>DRAW_SPRITE</code> calls it twice: once for the col-0 data section (writing screen columns <code>draw_col</code> and <code>draw_col+1</code>), then &mdash; with <code>C</code> incremented by one &mdash; once for the col-1 data section (writing screen columns <code>draw_col+1</code> and <code>draw_col+2</code>). Screen column <code>draw_col+1</code> therefore receives two sequential AND/OR passes; the mask data in the exported file is pre-computed so these passes compose correctly.</p>
+
+      <h2 id="player-pointer">Resolving the Frame/Shift Pointer</h2>
+      <p>At draw time, <code>DRAW_SPRITE</code> resolves <code>sprite_frame</code> (0&ndash;4) and <code>draw_shift</code> (0&ndash;7) into the address of the correct data block. The frame-N shifts table starts at <code>mr_soft_frame0_shifts + N &times; 16</code> (each table is 8 &times; 2 = 16 bytes), and the correct entry is at byte offset <code>shift &times; 2</code> within it:</p>
+      <pre><code>        <span class="keyword">ld</span>      a, (sprite_frame)
+        <span class="keyword">ld</span>      l, a
+        <span class="keyword">ld</span>      h, <span class="number">0</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; x2</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; x4</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; x8</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; x16 (= frame x table stride)</span>
+        <span class="keyword">ld</span>      de, mr_soft_frame0_shifts
+        <span class="keyword">add</span>     hl, de          <span class="comment">; HL = base of frame N's shift table</span>
+
+        <span class="keyword">ld</span>      a, (draw_shift)
+        <span class="keyword">ld</span>      e, a
+        <span class="keyword">ld</span>      d, <span class="number">0</span>
+        <span class="keyword">add</span>     hl, de
+        <span class="keyword">add</span>     hl, de          <span class="comment">; += shift x 2 (each defw is 2 bytes)</span>
+
+        <span class="keyword">ld</span>      e, (hl)
+        <span class="keyword">inc</span>     hl
+        <span class="keyword">ld</span>      d, (hl)
+        <span class="keyword">push</span>    de
+        <span class="keyword">pop</span>     ix              <span class="comment">; IX = pointer to the frame/shift data block</span></code></pre>
+      <p>No division is required: the stride of 16 bytes per frame is a power-of-two, reached by four doublings of <code>HL</code>. The contiguous layout of the shift tables in the exported file is what makes this stride reliable.</p>
+
+      <h2 id="player-loop">The Animation Loop</h2>
+      <p>The main loop is synchronised to the 50&nbsp;Hz television frame rate:</p>
+      <pre><code><span class="label">MAIN_LOOP</span>:
+        <span class="keyword">halt</span>                    <span class="comment">; suspend until next maskable interrupt (50 Hz)</span>
+        <span class="keyword">call</span>    ERASE_SPRITE    <span class="comment">; zero pixel rows + reset attributes</span>
+
+        <span class="comment">; Update horizontal position</span>
+        <span class="keyword">ld</span>      a, (sprite_x)
+        <span class="keyword">ld</span>      b, a
+        <span class="keyword">ld</span>      a, (sprite_dir)
+        <span class="keyword">add</span>     a, b            <span class="comment">; x += dir  (dir is +1 or $FF = -1)</span>
+        <span class="keyword">ld</span>      (sprite_x), a
+        <span class="comment">; ... boundary checks flip sprite_dir at x = 8 and x = 232 ...</span>
+
+        <span class="comment">; Advance animation frame every 8 moves</span>
+        <span class="keyword">ld</span>      a, (frame_tick)
+        <span class="keyword">inc</span>     a
+        <span class="keyword">and</span>     <span class="number">$07</span>
+        <span class="keyword">ld</span>      (frame_tick), a
+        <span class="keyword">jr</span>      nz, DO_DRAW     <span class="comment">; only advance frame when tick wraps to 0</span>
+        <span class="comment">; ... increment sprite_frame modulo 5 ...</span>
+<span class="label">DO_DRAW</span>:
+        <span class="keyword">call</span>    DRAW_SPRITE
+        <span class="keyword">jr</span>      MAIN_LOOP</code></pre>
+      <p><code>halt</code> suspends the CPU until the next maskable interrupt, which the ZX Spectrum raises at 50&nbsp;Hz once per television frame. This synchronises the loop to the display, preventing tearing and giving smooth, constant-speed motion. The animation frame advances every 8 main-loop iterations, cycling through the 5-frame walk cycle at approximately 6 frame changes per second.</p>
+      <p><strong class="bold-text">ERASE_SPRITE</strong> always zeros 3 character columns (not 2), because shifts 1&ndash;7 spread the sprite across 3 screen columns. Erasing only the 2 columns of the unshifted sprite would leave a stale column of pixels on frames where the sub-character shift changes.</p>
+
+      <h2 id="player-source">Source: mr_soft_demo.asm</h2>
+      <p>This is the complete demo. Its <code>include</code> line references <code>mr_soft_sprite.asm</code> &mdash; the file the Player Sprite Editor exported for this example. To use your own sprite instead: export it from the editor, place the <code>.asm</code> file in the same folder as the demo, update the <code>include</code> line to match the filename you used, and replace every occurrence of <code>mr_soft</code> in the demo with your sprite&#x27;s label prefix. The demo assumes a 16&times;24-pixel (2&times;3-character) sprite placed at character row 8; for sprites of a different size or screen position you will also need to adjust the screen address constants (<code>$4800</code>, <code>$4820</code>, <code>$4840</code>), the boundary values for <code>sprite_x</code>, and the erase routine&#x27;s column count.</p>
+      <pre><code><span class="comment">; ============================================================</span>
+<span class="comment">; MR SOFT SPRITE DEMO - ZX Spectrum 48K</span>
+<span class="comment">; ============================================================</span>
+<span class="comment">; Assemble with: pasmo --tapbas mr_soft_demo.asm mr_soft_demo.tap</span>
+<span class="comment">;</span>
+<span class="comment">; Sprite: 16x24 pixels (2x3 chars), 5 animation frames</span>
+<span class="comment">; Pre-shifted data: 8 pixel shifts (0-7)</span>
+<span class="comment">; Mask format: interleaved (mask byte, sprite byte per pixel column)</span>
+<span class="comment">;</span>
+<span class="comment">; The sprite bounces left &lt;-&gt; right across the middle of the screen.</span>
+<span class="comment">; Animation frames advance every 4 pixels of movement.</span>
+<span class="comment">;</span>
+<span class="comment">; Screen Y is fixed at character row 8 (vertical middle band).</span>
+<span class="comment">; The sprite occupies screen char rows 8, 9, 10.</span>
+<span class="comment">;</span>
+<span class="comment">; ZX Spectrum screen address layout used here (all in middle third):</span>
+<span class="comment">;   Pixel addr = 0x4800 + scan(0-7)*0x100 + char_row_offset + col</span>
+<span class="comment">;   char row 8:  offset = 0x00  (row_in_third=0)</span>
+<span class="comment">;   char row 9:  offset = 0x20  (row_in_third=1)</span>
+<span class="comment">;   char row 10: offset = 0x40  (row_in_third=2)</span>
+<span class="comment">;</span>
+<span class="comment">; Attribute addresses:</span>
+<span class="comment">;   row 8:  0x5900 + col</span>
+<span class="comment">;   row 9:  0x5920 + col</span>
+<span class="comment">;   row 10: 0x5940 + col</span>
+<span class="comment">; ============================================================</span>
+
+        <span class="directive">org</span>     <span class="number">$8000</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; Entry point (called by BASIC: RANDOMIZE USR 32768)</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">START</span>:
+        <span class="keyword">ld</span>      a, <span class="number">0</span>
+        <span class="keyword">out</span>     (<span class="number">$FE</span>), a        <span class="comment">; Black border</span>
+
+        <span class="keyword">call</span>    CLS
+        <span class="keyword">call</span>    SET_ATTRS
+
+        <span class="comment">; Initialise state</span>
+        <span class="keyword">ld</span>      a, <span class="number">232</span>
+        <span class="keyword">ld</span>      (sprite_x), a   <span class="comment">; Start near right edge</span>
+        <span class="keyword">ld</span>      a, <span class="number">$FF</span>
+        <span class="keyword">ld</span>      (sprite_dir), a <span class="comment">; Direction: $FF = -1 = moving left</span>
+        <span class="keyword">xor</span>     a
+        <span class="keyword">ld</span>      (sprite_frame), a
+        <span class="keyword">ld</span>      (frame_tick), a
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; MAIN LOOP  (runs forever, halts for 50Hz vsync)</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">MAIN_LOOP</span>:
+        <span class="keyword">halt</span>                    <span class="comment">; Wait for interrupt (frame sync)</span>
+
+        <span class="keyword">call</span>    ERASE_SPRITE
+
+        <span class="comment">; Move sprite</span>
+        <span class="keyword">ld</span>      a, (sprite_x)
+        <span class="keyword">ld</span>      b, a
+        <span class="keyword">ld</span>      a, (sprite_dir)
+        <span class="keyword">add</span>     a, b            <span class="comment">; new_x = x + dir</span>
+        <span class="keyword">ld</span>      (sprite_x), a
+
+        <span class="comment">; Boundary check: right edge (x &gt; 232)</span>
+        <span class="keyword">cp</span>      <span class="number">233</span>
+        <span class="keyword">jr</span>      nc, BOUNCE_RIGHT
+
+        <span class="comment">; Boundary check: left edge (x &lt; 8)</span>
+        <span class="keyword">cp</span>      <span class="number">8</span>
+        <span class="keyword">jr</span>      c,  BOUNCE_LEFT
+        <span class="keyword">jr</span>      ADVANCE_FRAME
+
+<span class="label">BOUNCE_RIGHT</span>:
+        <span class="keyword">ld</span>      a, <span class="number">232</span>
+        <span class="keyword">ld</span>      (sprite_x), a
+        <span class="keyword">ld</span>      a, <span class="number">$FF</span>          <span class="comment">; dir = -1</span>
+        <span class="keyword">ld</span>      (sprite_dir), a
+        <span class="keyword">jr</span>      ADVANCE_FRAME
+
+<span class="label">BOUNCE_LEFT</span>:
+        <span class="keyword">ld</span>      a, <span class="number">8</span>
+        <span class="keyword">ld</span>      (sprite_x), a
+        <span class="keyword">ld</span>      a, <span class="number">1</span>            <span class="comment">; dir = +1</span>
+        <span class="keyword">ld</span>      (sprite_dir), a
+
+<span class="label">ADVANCE_FRAME</span>:
+        <span class="comment">; Advance animation frame every 8 movement steps</span>
+        <span class="keyword">ld</span>      a, (frame_tick)
+        <span class="keyword">inc</span>     a
+        <span class="keyword">and</span>     <span class="number">$07</span>             <span class="comment">; mod 8</span>
+        <span class="keyword">ld</span>      (frame_tick), a
+        <span class="keyword">jr</span>      nz, DO_DRAW
+
+        <span class="keyword">ld</span>      a, (sprite_frame)
+        <span class="keyword">inc</span>     a
+        <span class="keyword">cp</span>      <span class="number">5</span>               <span class="comment">; mr_soft_frame_count</span>
+        <span class="keyword">jr</span>      c, SAVE_FRAME
+        <span class="keyword">xor</span>     a
+<span class="label">SAVE_FRAME</span>:
+        <span class="keyword">ld</span>      (sprite_frame), a
+
+<span class="label">DO_DRAW</span>:
+        <span class="keyword">call</span>    DRAW_SPRITE
+        <span class="keyword">jr</span>      MAIN_LOOP
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; CLS  -  zero all pixel RAM ($4000-$57FF)</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">CLS</span>:
+        <span class="keyword">ld</span>      hl, <span class="number">$4000</span>
+        <span class="keyword">ld</span>      de, <span class="number">$4001</span>
+        <span class="keyword">ld</span>      bc, <span class="number">$17FF</span>
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">ldir</span>
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; SET_ATTRS  -  white paper / black ink across full screen</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">SET_ATTRS</span>:
+        <span class="keyword">ld</span>      hl, <span class="number">$5800</span>
+        <span class="keyword">ld</span>      de, <span class="number">$5801</span>
+        <span class="keyword">ld</span>      bc, <span class="number">$02FF</span>
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>       <span class="comment">; white paper, black ink</span>
+        <span class="keyword">ldir</span>
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; ERASE_SPRITE</span>
+<span class="comment">; Clears up to 3 character columns across sprite char rows 8-10.</span>
+<span class="comment">; Shift1-7 sprites spill into a 3rd char column, so always erase 3.</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">ERASE_SPRITE</span>:
+        <span class="keyword">ld</span>      a, (sprite_x)
+        <span class="keyword">rrca</span>
+        <span class="keyword">rrca</span>
+        <span class="keyword">rrca</span>
+        <span class="keyword">and</span>     <span class="number">$1F</span>             <span class="comment">; A = char column</span>
+
+        <span class="comment">; Erase 3 char cols across screen char rows 8, 9, 10</span>
+        <span class="keyword">ld</span>      c, a            <span class="comment">; C = first char col</span>
+
+        <span class="comment">; -- Char row 8 (base $4800 + scan*$100 + col) --</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>            <span class="comment">; 8 scan lines</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+<span class="label">ER_ROW8</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, c
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     d               <span class="comment">; next scan line: +$100</span>
+        <span class="keyword">djnz</span>    ER_ROW8
+
+        <span class="comment">; -- Char row 9 (base $4820 + scan*$100 + col) --</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$20</span>
+        <span class="keyword">add</span>     a, c            <span class="comment">; base low byte = $20 + col</span>
+        <span class="keyword">ld</span>      e, a
+<span class="label">ER_ROW9</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     d
+        <span class="keyword">djnz</span>    ER_ROW9
+
+        <span class="comment">; -- Char row 10 (base $4840 + scan*$100 + col) --</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$40</span>
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      e, a
+<span class="label">ER_ROW10</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">inc</span>     d
+        <span class="keyword">djnz</span>    ER_ROW10
+
+        <span class="comment">; -- Clear attributes for those 3 char cols x 3 char rows --</span>
+        <span class="keyword">ld</span>      hl, <span class="number">$5900</span>
+        <span class="keyword">ld</span>      a, l
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      l, a
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+
+        <span class="keyword">ld</span>      hl, <span class="number">$5920</span>
+        <span class="keyword">ld</span>      a, l
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      l, a
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+
+        <span class="keyword">ld</span>      hl, <span class="number">$5940</span>
+        <span class="keyword">ld</span>      a, l
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      l, a
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      (hl), <span class="number">$38</span>
+
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; DRAW_SPRITE</span>
+<span class="comment">; Draws the current animation frame at sprite_x (pixel coords).</span>
+<span class="comment">; Fixed Y = character row 8 on screen.</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">DRAW_SPRITE</span>:
+        <span class="comment">; Decompose pixel X into char column and sub-pixel shift</span>
+        <span class="keyword">ld</span>      a, (sprite_x)
+        <span class="keyword">ld</span>      b, a
+        <span class="keyword">rrca</span>
+        <span class="keyword">rrca</span>
+        <span class="keyword">rrca</span>
+        <span class="keyword">and</span>     <span class="number">$1F</span>
+        <span class="keyword">ld</span>      (draw_col), a   <span class="comment">; char column 0-31</span>
+
+        <span class="keyword">ld</span>      a, b
+        <span class="keyword">and</span>     <span class="number">$07</span>
+        <span class="keyword">ld</span>      (draw_shift), a <span class="comment">; pixel shift 0-7</span>
+
+        <span class="comment">; -------------------------------------------------</span>
+        <span class="comment">; Resolve pointer: mr_soft_frameN_shifts[shift]</span>
+        <span class="comment">; Frame shift tables are contiguous: each table is</span>
+        <span class="comment">; 8 x defw = 16 bytes. Table for frame N starts at</span>
+        <span class="comment">; mr_soft_frame0_shifts + N*16.</span>
+        <span class="comment">; -------------------------------------------------</span>
+        <span class="keyword">ld</span>      a, (sprite_frame)
+        <span class="keyword">ld</span>      l, a
+        <span class="keyword">ld</span>      h, <span class="number">0</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; *2</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; *4</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; *8</span>
+        <span class="keyword">add</span>     hl, hl          <span class="comment">; *16</span>
+        <span class="keyword">ld</span>      de, mr_soft_frame0_shifts
+        <span class="keyword">add</span>     hl, de          <span class="comment">; HL = base of frame's shifts table</span>
+
+        <span class="comment">; Index by pixel shift (*2 for defw)</span>
+        <span class="keyword">ld</span>      a, (draw_shift)
+        <span class="keyword">ld</span>      e, a
+        <span class="keyword">ld</span>      d, <span class="number">0</span>
+        <span class="keyword">add</span>     hl, de
+        <span class="keyword">add</span>     hl, de          <span class="comment">; HL += shift * 2</span>
+
+        <span class="comment">; Dereference to get sprite data pointer -&gt; IX</span>
+        <span class="keyword">ld</span>      e, (hl)
+        <span class="keyword">inc</span>     hl
+        <span class="keyword">ld</span>      d, (hl)
+        <span class="keyword">push</span>    de
+        <span class="keyword">pop</span>     ix              <span class="comment">; IX = pointer to sprite data block</span>
+
+        <span class="comment">; -------------------------------------------------</span>
+        <span class="comment">; Dispatch to shift0 or shiftN blitter</span>
+        <span class="comment">; -------------------------------------------------</span>
+        <span class="keyword">ld</span>      a, (draw_shift)
+        <span class="keyword">or</span>      a
+        <span class="keyword">jr</span>      z,  DRAW_S0
+
+        <span class="comment">; --- ShiftN blitter (shift 1-7) ---</span>
+        <span class="comment">; Data layout: col0 section (24 quads = 96 bytes), col1 section (24 quads)</span>
+        <span class="comment">; Each quad: [mask_colA, spr_colA, mask_colB, spr_colB]</span>
+        <span class="comment">; col0 section writes screen cols: draw_col, draw_col+1</span>
+        <span class="comment">; col1 section writes screen cols: draw_col+1, draw_col+2</span>
+
+        <span class="keyword">ld</span>      a, (draw_col)
+        <span class="keyword">ld</span>      c, a            <span class="comment">; C = first screen col</span>
+
+        <span class="comment">; Draw col0 section -- IX advances 96 bytes naturally, landing at col1 section</span>
+        <span class="keyword">call</span>    BLIT_QUAD_SECTION
+
+        <span class="comment">; Draw col1 section (starts one char col to the right)</span>
+        <span class="keyword">inc</span>     c
+        <span class="keyword">call</span>    BLIT_QUAD_SECTION
+        <span class="keyword">ret</span>
+
+<span class="label">DRAW_S0</span>:
+        <span class="comment">; --- Shift0 blitter ---</span>
+        <span class="comment">; Data layout: col0 section (24 pairs = 48 bytes), col1 section (24 pairs)</span>
+        <span class="comment">; Each pair: [mask, sprite]</span>
+
+        <span class="keyword">ld</span>      a, (draw_col)
+        <span class="keyword">ld</span>      c, a
+
+        <span class="comment">; Draw col0 section -- IX advances 48 bytes naturally, landing at col1 section</span>
+        <span class="keyword">call</span>    BLIT_PAIR_SECTION
+
+        <span class="comment">; Draw col1 section (one char col to the right)</span>
+        <span class="keyword">inc</span>     c
+        <span class="keyword">call</span>    BLIT_PAIR_SECTION
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; BLIT_PAIR_SECTION</span>
+<span class="comment">; Blits 24 scan lines (3 char rows x 8) of mask/sprite pairs</span>
+<span class="comment">; from IX into a single screen character column C.</span>
+<span class="comment">;</span>
+<span class="comment">; Entry: IX = sprite data pointer (pairs: mask, sprite)</span>
+<span class="comment">;        C  = screen char column to write</span>
+<span class="comment">; IX advances by 48 bytes (24 pairs).</span>
+<span class="comment">; Trashes: A, B, D, E, H, L</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">BLIT_PAIR_SECTION</span>:
+        <span class="comment">; -- Char row 8: base $4800+col, scan lines 0-7 --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>          <span class="comment">; high byte of screen addr (scan 0)</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BPS_R8</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, c
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)       <span class="comment">; mask</span>
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)          <span class="comment">; sprite</span>
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d               <span class="comment">; +$100 to next scan line</span>
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BPS_R8
+
+        <span class="comment">; -- Char row 9: base $4820+col --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$20</span>
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      e, a            <span class="comment">; E = $20 + col (low byte offset)</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BPS_R9</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BPS_R9
+
+        <span class="comment">; -- Char row 10: base $4840+col --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$40</span>
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      e, a
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BPS_R10</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BPS_R10
+
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; BLIT_QUAD_SECTION</span>
+<span class="comment">; Blits 24 scan lines (3 char rows x 8) of mask/sprite quads</span>
+<span class="comment">; from IX into TWO consecutive screen char columns C and C+1.</span>
+<span class="comment">;</span>
+<span class="comment">; Entry: IX = sprite data pointer (quads: m0,s0,m1,s1)</span>
+<span class="comment">;        C  = first screen char column to write</span>
+<span class="comment">; IX advances by 96 bytes (24 quads).</span>
+<span class="comment">; Trashes: A, B, D, E, H, L</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">BLIT_QUAD_SECTION</span>:
+        <span class="comment">; -- Char row 8 --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BQS_R8</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, c
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)       <span class="comment">; mask for col</span>
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)          <span class="comment">; sprite for col</span>
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     l               <span class="comment">; next char col</span>
+        <span class="keyword">ld</span>      a, (ix+<span class="number">2</span>)       <span class="comment">; mask for col+1</span>
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">3</span>)          <span class="comment">; sprite for col+1</span>
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d               <span class="comment">; +$100 next scan line</span>
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BQS_R8
+
+        <span class="comment">; -- Char row 9 --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$20</span>
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      e, a
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BQS_R9</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      a, (ix+<span class="number">2</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">3</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BQS_R9
+
+        <span class="comment">; -- Char row 10 --</span>
+        <span class="keyword">ld</span>      d, <span class="number">$48</span>
+        <span class="keyword">ld</span>      a, <span class="number">$40</span>
+        <span class="keyword">add</span>     a, c
+        <span class="keyword">ld</span>      e, a
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+<span class="label">BQS_R10</span>:
+        <span class="keyword">ld</span>      h, d
+        <span class="keyword">ld</span>      l, e
+        <span class="keyword">ld</span>      a, (ix+<span class="number">0</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">1</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     l
+        <span class="keyword">ld</span>      a, (ix+<span class="number">2</span>)
+        <span class="keyword">and</span>     (hl)
+        <span class="keyword">or</span>      (ix+<span class="number">3</span>)
+        <span class="keyword">ld</span>      (hl), a
+        <span class="keyword">inc</span>     d
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">djnz</span>    BQS_R10
+
+        <span class="keyword">ret</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; VARIABLES  (in RAM, above code)</span>
+<span class="comment">; -------------------------------------------------------</span>
+<span class="label">sprite_x</span>:       <span class="directive">defb</span> <span class="number">232</span>
+<span class="label">sprite_dir</span>:     <span class="directive">defb</span> <span class="number">$FF</span>
+<span class="label">sprite_frame</span>:   <span class="directive">defb</span> <span class="number">0</span>
+<span class="label">frame_tick</span>:     <span class="directive">defb</span> <span class="number">0</span>
+<span class="label">draw_col</span>:       <span class="directive">defb</span> <span class="number">0</span>
+<span class="label">draw_shift</span>:     <span class="directive">defb</span> <span class="number">0</span>
+
+<span class="comment">; -------------------------------------------------------</span>
+<span class="comment">; SPRITE DATA (included from the exported file)</span>
+<span class="comment">; -------------------------------------------------------</span>
+        <span class="directive">include</span> <span class="string">"mr_soft_sprite.asm"</span>
+
+        <span class="directive">end</span>     START</code></pre>
+
+      <h2 id="player-running">Assembling and Running</h2>
+      <p>Place <code>mr_soft_sprite.asm</code> and <code>mr_soft_demo.asm</code> in the same folder, then assemble and run as described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>:</p>
+      <pre><code>pasmo --tapbas mr_soft_demo.asm mr_soft_demo.tap &amp;&amp; fuse --tape mr_soft_demo.tap --auto-load</code></pre>
+      <p>The <code>--tapbas</code> flag wraps the assembled machine code in a BASIC loader so the <code>.tap</code> image auto-runs when loaded; <code>--auto-load</code> tells Fuse to insert and start the tape immediately on launch. You should see a white-paper screen with the sprite appearing near the right edge and bouncing back and forth, cycling through its walk animation. To use your own sprite, export it from the Player Sprite Editor, swap in the new <code>.asm</code> file, and follow the label-substitution steps described above; the bouncing loop itself adapts automatically.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function toggleExamplesMenu() {
+    var list = document.getElementById('examples-list');
+    var btn = document.getElementById('examples-toggle');
+    var arrow = document.getElementById('examples-arrow');
+    var isOpen = list.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    arrow.innerHTML = isOpen ? '&#9660;' : '&#9658;';
+}
+</script>
+
+</body>
+</html>

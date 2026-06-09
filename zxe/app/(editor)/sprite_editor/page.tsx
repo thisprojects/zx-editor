@@ -158,7 +158,7 @@ export default function SpriteEditorPage() {
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
         docsLink={{
-          href: '/asm_examples.html#udg-example',
+          href: '/asm_examples.html',
           description:
             'the UDG ASM example shows you how to implement the ASM output in Z80 using pasmo with --tapbas and fuse with --auto-load.',
         }}

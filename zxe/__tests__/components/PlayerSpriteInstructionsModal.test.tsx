@@ -58,6 +58,13 @@ describe('PlayerSpriteInstructionsModal', () => {
       render(<PlayerSpriteInstructionsModal isOpen={true} onClose={onClose} />);
       expect(screen.getByText(/onion skinning/i)).toBeInTheDocument();
     });
+
+    it('links to the Player Sprite ASM example page', () => {
+      render(<PlayerSpriteInstructionsModal isOpen={true} onClose={onClose} />);
+      const link = screen.getByRole('link', { name: /Player Sprite ASM example/i });
+      expect(link).toHaveAttribute('href', '/player_sprite_examples.html');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
   });
 
   describe('close button', () => {

@@ -147,15 +147,19 @@ describe('Navbar', () => {
       render(<Navbar />);
 
       expect(screen.queryByText('Z80 Assembly Introduction')).not.toBeInTheDocument();
+      expect(screen.queryByText('ASM Example: UDG')).not.toBeInTheDocument();
+      expect(screen.queryByText('ASM Example: Player Sprite')).not.toBeInTheDocument();
     });
 
-    it('should show doc links when the dropdown is opened', () => {
+    it('should show all doc links when the dropdown is opened', () => {
       mockUsePathname.mockReturnValue('/sprite_editor');
       render(<Navbar />);
 
       fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
 
       expect(screen.getByText('Z80 Assembly Introduction')).toBeInTheDocument();
+      expect(screen.getByText('ASM Example: UDG')).toBeInTheDocument();
+      expect(screen.getByText('ASM Example: Player Sprite')).toBeInTheDocument();
     });
 
     it('should hide doc links when the dropdown is toggled closed', () => {
@@ -179,24 +183,36 @@ describe('Navbar', () => {
       expect(link).toHaveAttribute('href', '/z80_book.html');
     });
 
-    it('should open the z80 book link in a new tab', () => {
+    it('should link to the UDG ASM example with correct href', () => {
       mockUsePathname.mockReturnValue('/sprite_editor');
       render(<Navbar />);
 
       fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
 
-      const link = screen.getByRole('link', { name: 'Z80 Assembly Introduction' });
-      expect(link).toHaveAttribute('target', '_blank');
+      const link = screen.getByRole('link', { name: 'ASM Example: UDG' });
+      expect(link).toHaveAttribute('href', '/asm_examples.html');
     });
 
-    it('should set rel="noopener noreferrer" on the z80 book link', () => {
+    it('should link to the Player Sprite ASM example with correct href', () => {
       mockUsePathname.mockReturnValue('/sprite_editor');
       render(<Navbar />);
 
       fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
 
-      const link = screen.getByRole('link', { name: 'Z80 Assembly Introduction' });
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      const link = screen.getByRole('link', { name: 'ASM Example: Player Sprite' });
+      expect(link).toHaveAttribute('href', '/player_sprite_examples.html');
+    });
+
+    it('should open doc links in a new tab', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+
+      for (const name of ['Z80 Assembly Introduction', 'ASM Example: UDG', 'ASM Example: Player Sprite']) {
+        expect(screen.getByRole('link', { name })).toHaveAttribute('target', '_blank');
+        expect(screen.getByRole('link', { name })).toHaveAttribute('rel', 'noopener noreferrer');
+      }
     });
 
     it('should close the dropdown when a doc link is clicked', () => {
@@ -207,6 +223,26 @@ describe('Navbar', () => {
       fireEvent.click(screen.getByText('Z80 Assembly Introduction'));
 
       expect(screen.queryByText('Z80 Assembly Introduction')).not.toBeInTheDocument();
+    });
+
+    it('should close the dropdown when the UDG example link is clicked', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+      fireEvent.click(screen.getByText('ASM Example: UDG'));
+
+      expect(screen.queryByText('ASM Example: UDG')).not.toBeInTheDocument();
+    });
+
+    it('should close the dropdown when the Player Sprite example link is clicked', () => {
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+      fireEvent.click(screen.getByText('ASM Example: Player Sprite'));
+
+      expect(screen.queryByText('ASM Example: Player Sprite')).not.toBeInTheDocument();
     });
 
     it('should close the dropdown when clicking outside', () => {

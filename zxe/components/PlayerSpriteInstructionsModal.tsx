@@ -99,6 +99,17 @@ export function PlayerSpriteInstructionsModal({ isOpen, onClose }: PlayerSpriteI
               tables included. Configure which options to include using the export settings in the toolbar
               before exporting.
             </p>
+            <p className="mt-2">
+              <a
+                href="/player_sprite_examples.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                See the Player Sprite ASM example
+              </a>
+              {' '}for a worked example showing how to animate and display the exported data on real Z80 hardware.
+            </p>
           </section>
 
         </div>

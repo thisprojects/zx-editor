@@ -58,6 +58,13 @@ describe('UDGInstructionsModal', () => {
       render(<UDGInstructionsModal isOpen={true} onClose={onClose} />);
       expect(screen.getByText(/144–164/)).toBeInTheDocument();
     });
+
+    it('links to the UDG ASM example page', () => {
+      render(<UDGInstructionsModal isOpen={true} onClose={onClose} />);
+      const link = screen.getByRole('link', { name: /UDG ASM example/i });
+      expect(link).toHaveAttribute('href', '/asm_examples.html');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
   });
 
   describe('close button', () => {

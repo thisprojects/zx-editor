@@ -198,6 +198,11 @@ export default function PlayerSpriteEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+        docsLink={{
+          href: '/player_sprite_examples.html',
+          description:
+            'the Player Sprite ASM example shows how to animate and display the exported data on real Z80 hardware using pasmo with --tapbas and fuse with --auto-load.',
+        }}
       />
 
       {/* Instructions Modal */}
