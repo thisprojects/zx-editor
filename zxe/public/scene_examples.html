@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scene ASM Example: Displaying an Exported .scr File on Z80 Hardware</title>
+<style>
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #e0e0e0;
+    --text-dim: #a0a0b0;
+    --code-bg: #0d1117;
+    --code-border: #30363d;
+    --link: #58a6ff;
+    --heading: #f0f0f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+}
+h1, h2, h3 { color: var(--heading); margin-top: 2.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; border-bottom: 2px solid var(--accent2); padding-bottom: 0.3rem; }
+h3 { font-size: 1.2rem; color: var(--accent); }
+p { margin-bottom: 1rem; }
+ul, ol { margin: 0 0 1rem 1.5rem; }
+li { margin-bottom: 0.3rem; }
+.title-block {
+    text-align: center;
+    padding: 3rem 1rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-radius: 12px;
+    border: 1px solid var(--accent2);
+}
+.title-block h1 { border: none; font-size: 2.5rem; margin-top: 0; }
+.title-block .subtitle { font-size: 1.2rem; color: var(--text-dim); margin-top: 0.5rem; }
+.title-block .assembler { font-size: 0.9rem; color: var(--accent); font-family: monospace; margin-top: 1rem; }
+pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    color: #7ee787;
+}
+pre code { color: #c9d1d9; }
+.comment { color: #8b949e; }
+.keyword { color: #ff7b72; }
+.label { color: #d2a8ff; }
+.string { color: #a5d6ff; }
+.number { color: #79c0ff; }
+.directive { color: #ffa657; }
+.bold-text { font-weight: 700; }
+a { color: var(--link); }
+.back-to-top {
+    display: inline-block;
+    margin-top: 0.3rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+}
+.back-to-top:hover { color: var(--link); }
+section { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--code-border); }
+section:last-child { border-bottom: none; }
+
+/* Layout: sidebar + content */
+.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+.sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.sidebar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--heading);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--accent2);
+}
+.sidebar-toggle:hover { color: var(--link); }
+.sidebar-arrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+}
+.sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+.sidebar-list.open {
+    max-height: 30rem;
+    padding-top: 0.5rem;
+}
+.sidebar-list li { margin: 0; }
+.sidebar-list a {
+    display: block;
+    padding: 0.4rem 0.6rem 0.4rem 1.6rem;
+    border-radius: 4px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.sidebar-list a:hover {
+    background: var(--surface2);
+    color: var(--link);
+}
+.content {
+    flex: 1;
+    min-width: 0;
+    max-width: 900px;
+}
+@media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <button class="sidebar-toggle" id="examples-toggle" aria-expanded="true" aria-controls="examples-list" onclick="toggleExamplesMenu()">
+        <span class="sidebar-arrow" id="examples-arrow">&#9660;</span>
+        Examples
+      </button>
+      <ul class="sidebar-list open" id="examples-list">
+        <li><a href="/asm_examples.html">UDG</a></li>
+        <li><a href="/player_sprite_examples.html">Player Sprite</a></li>
+        <li><a href="/scene_examples.html">Scene</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="title-block">
+      <h1>Scene ASM Example</h1>
+      <div class="subtitle">Displaying an Exported .scr File on Real Z80 Hardware</div>
+      <div class="assembler">by Norbert of Norbsoft</div>
+    </div>
+
+    <section id="introduction">
+      <p>The Scene Editor's <strong>Export SCR</strong> button saves your drawing as a 6912-byte <code>.scr</code> file — the standard ZX Spectrum screen format used by emulators and snapshot tools. The first 6144 bytes are the pixel bitmap (the display file) and the final 768 bytes are the attribute data (ink, paper, bright and flash for each 8x8 cell).</p>
+      <p>To show a <code>.scr</code> file on real (or emulated) hardware, you need to get those 6912 bytes into screen memory at <code>$4000</code>-<code>$5AFF</code>. This example shows the simplest way to do that with <code>INCBIN</code>.</p>
+      <p class="bold-text">This example is written for Pasmo with the --tapbas flag, producing a .tap file that auto-runs in an emulator such as Fuse with --auto-load — exactly the workflow described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>.</p>
+    </section>
+
+    <section id="scene-example">
+      <h1>Scene: Loading an Exported .scr File</h1>
+      <a href="#" class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">[Back to top]</a>
+
+      <h2 id="scene-incbin">Embedding the .scr File with INCBIN</h2>
+      <p><code>INCBIN</code> (supported by Pasmo, NASM, z80asm and most modern Z80 assemblers) pulls a binary file's raw bytes directly into the assembled output at the point it appears, with a label pointing at the start of those bytes:</p>
+      <pre><code><span class="label">screen_data</span>:
+        <span class="directive">incbin</span>  <span class="string">"myscreen.scr"</span>   <span class="comment">; embeds all 6912 bytes</span></code></pre>
+      <p>This is by far the simplest way to bundle exported scene data with your program — there's no parsing required, just a label marking where the bytes begin.</p>
+
+      <h2 id="scene-copy">Copying to Screen Memory</h2>
+      <p>The display file occupies <code>$4000</code>-<code>$57FF</code> (6144 bytes) and the attribute file immediately follows at <code>$5800</code>-<code>$5AFF</code> (768 bytes). Two <code>ldir</code> blocks copy the embedded data straight into place:</p>
+      <pre><code>        <span class="keyword">ld</span>      hl, screen_data
+        <span class="keyword">ld</span>      de, $4000       <span class="comment">; display file ($4000-$57FF)</span>
+        <span class="keyword">ld</span>      bc, 6144
+        <span class="keyword">ldir</span>
+        <span class="keyword">ld</span>      hl, screen_data + 6144
+        <span class="keyword">ld</span>      de, $5800       <span class="comment">; attribute file ($5800-$5AFF)</span>
+        <span class="keyword">ld</span>      bc, 768
+        <span class="keyword">ldir</span></code></pre>
+      <p><code>screen_data + 6144</code> skips past the pixel bitmap to the start of the attribute bytes within the embedded file — the same split the Scene Editor uses when it writes the <code>.scr</code> file. Once both <code>ldir</code>s complete, the screen updates immediately because we've written directly into the memory the ULA reads from to generate the display — no further drawing instructions are needed.</p>
+
+      <h2 id="scene-source">Source: scene_viewer.asm</h2>
+      <p>Here is the complete viewer. It expects a file named <code>myscreen.scr</code> in the same folder — the name the Scene Editor's <strong>Export SCR</strong> dialog suggests by default, though you can rename it to anything as long as the <code>incbin</code> line below matches:</p>
+      <pre><code><span class="comment">; scene_viewer.asm</span>
+<span class="comment">;</span>
+<span class="comment">; Loads a 6912-byte .scr file (exported by the ZX Spectrum Scene Editor)</span>
+<span class="comment">; and copies it into screen memory ($4000-$5AFF), displaying it full-screen.</span>
+<span class="comment">;</span>
+<span class="comment">; Assemble:  pasmo --tapbas scene_viewer.asm scene_viewer.tap</span>
+<span class="comment">; Run:       fuse --auto-load scene_viewer.tap</span>
+
+        <span class="directive">org</span>     <span class="number">$8000</span>
+
+<span class="label">start</span>:
+        <span class="keyword">ld</span>      hl, screen_data
+        <span class="keyword">ld</span>      de, $4000       <span class="comment">; display file ($4000-$57FF)</span>
+        <span class="keyword">ld</span>      bc, 6144
+        <span class="keyword">ldir</span>
+        <span class="keyword">ld</span>      hl, screen_data + 6144
+        <span class="keyword">ld</span>      de, $5800       <span class="comment">; attribute file ($5800-$5AFF)</span>
+        <span class="keyword">ld</span>      bc, 768
+        <span class="keyword">ldir</span>
+
+<span class="label">halt_loop</span>:
+        <span class="keyword">halt</span>
+        <span class="keyword">jr</span>      halt_loop
+
+<span class="label">screen_data</span>:
+        <span class="directive">incbin</span>  <span class="string">"myscreen.scr"</span>
+
+        <span class="directive">end</span>     start</code></pre>
+
+      <h2 id="scene-running">Assembling and Running</h2>
+      <p>To try this with your own scene: export it from the Scene Editor as <code>myscreen.scr</code> (or edit the <code>incbin</code> line to match whatever filename you chose), place it in the same folder as <code>scene_viewer.asm</code>, then assemble and run it as described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>:</p>
+      <pre><code>pasmo --tapbas scene_viewer.asm scene_viewer.tap &amp;&amp; fuse --tape scene_viewer.tap --auto-load</code></pre>
+      <p>The <code>--tapbas</code> flag wraps the assembled machine code in a small BASIC loader so the resulting <code>.tap</code> auto-runs when loaded; <code>--auto-load</code> tells Fuse to insert and run the tape image immediately on startup. Your scene should appear full-screen as soon as the program runs.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function toggleExamplesMenu() {
+    var list = document.getElementById('examples-list');
+    var btn = document.getElementById('examples-toggle');
+    var arrow = document.getElementById('examples-arrow');
+    var isOpen = list.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    arrow.innerHTML = isOpen ? '&#9660;' : '&#9658;';
+}
+</script>
+
+</body>
+</html>

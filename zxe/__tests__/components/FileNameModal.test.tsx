@@ -187,9 +187,9 @@ describe('FileNameModal component', () => {
       expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).not.toBeInTheDocument();
     });
 
-    it('should not show a docs link when action is exportScr', () => {
+    it('should show a docs link when action is exportScr and docsLink is provided', () => {
       render(<FileNameModal {...defaultProps} action="exportScr" docsLink={docsLink} />);
-      expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /how do i display this on a z80/i })).toBeInTheDocument();
     });
 
     it('should not show a docs link when action is export but no docsLink is provided', () => {

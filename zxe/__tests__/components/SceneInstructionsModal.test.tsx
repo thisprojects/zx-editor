@@ -43,6 +43,13 @@ describe('SceneInstructionsModal', () => {
       render(<SceneInstructionsModal isOpen={true} onClose={onClose} />);
       expect(screen.getByText('Using a .scr File in Assembly')).toBeInTheDocument();
     });
+
+    it('links to the scene ASM example', () => {
+      render(<SceneInstructionsModal isOpen={true} onClose={onClose} />);
+      const link = screen.getByRole('link', { name: 'Scene ASM example' });
+      expect(link).toHaveAttribute('href', '/scene_examples.html');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
   });
 
   describe('close button', () => {

@@ -48,7 +48,7 @@ export function FileNameModal({
             </span>
           </div>
         </div>
-        {action === 'export' && docsLink && (
+        {(action === 'export' || action === 'exportScr') && docsLink && (
           <p className="mb-4 text-sm text-gray-400">
             <a
               href={docsLink.href}

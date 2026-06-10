@@ -162,6 +162,11 @@ export default function SceneEditorPage() {
         onFileNameChange={setFileName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
+        docsLink={{
+          href: '/scene_examples.html',
+          description:
+            'the Scene ASM example shows how to load an exported .scr file straight into screen memory using INCBIN.',
+        }}
       />
 
       {/* Instructions Modal */}

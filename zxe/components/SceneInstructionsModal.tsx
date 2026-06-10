@@ -95,6 +95,18 @@ load_screen:
     ldir
     ret`}
             </pre>
+            <p className="mt-2">
+              See the{' '}
+              <a
+                href="/scene_examples.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                Scene ASM example
+              </a>{' '}
+              for a full walkthrough of loading an exported .scr file with INCBIN.
+            </p>
           </section>
 
         </div>

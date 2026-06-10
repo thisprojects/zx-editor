@@ -17,6 +17,7 @@ const docItems = [
   { href: '/z80_book.html', label: 'Z80 Assembly Introduction' },
   { href: '/asm_examples.html', label: 'ASM Example: UDG' },
   { href: '/player_sprite_examples.html', label: 'ASM Example: Player Sprite' },
+  { href: '/scene_examples.html', label: 'ASM Example: Scene' },
 ];
 
 export function Navbar() {
