@@ -66,21 +66,11 @@ export function CharsetInstructionsModal({ isOpen, onClose }: CharsetInstruction
           <section>
             <h3 className="text-base font-semibold text-white mb-2">Exporting</h3>
             <p>
-              Two export formats are available:
+              <span className="font-semibold text-white">Export CHR</span> — a compact raw binary file,
+              8 bytes per character. Load it into your program with <code className="bg-gray-700 px-1 rounded">INCBIN</code> or
+              the ZX Spectrum <code className="bg-gray-700 px-1 rounded">LOAD</code> command and point the
+              system variable <code className="bg-gray-700 px-1 rounded">CHARS</code> (<code className="bg-gray-700 px-1 rounded">23606/7</code>) at it minus 256.
             </p>
-            <ul className="mt-2 space-y-2 list-none">
-              <li>
-                <span className="font-semibold text-white">Export CHR</span> — a compact raw binary file,
-                8 bytes per character. Load it into your program with <code className="bg-gray-700 px-1 rounded">INCBIN</code> or
-                the ZX Spectrum <code className="bg-gray-700 px-1 rounded">LOAD</code> command and point the
-                system variable <code className="bg-gray-700 px-1 rounded">CHARS</code> (<code className="bg-gray-700 px-1 rounded">23606/7</code>) at it minus 256.
-              </li>
-              <li className="mt-2">
-                <span className="font-semibold text-white">Export ASM</span> — the same data as readable{' '}
-                <code className="bg-gray-700 px-1 rounded">DEFB</code> binary literals, one character per block,
-                labelled by ASCII value. Useful if you want to hand-tweak glyphs directly in your source.
-              </li>
-            </ul>
             <p className="mt-2">
               Not sure what to do with the exported file?{' '}
               <a

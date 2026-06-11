@@ -69,31 +69,6 @@ export function useCharsetProject({
     );
   }, [chars, fileName]);
 
-  const exportASM = useCallback(() => {
-    const lines: string[] = [
-      `; Charset data — ${chars.length} characters (ASCII 32–${31 + chars.length})`,
-      '; 8 bytes per character, MSB = leftmost pixel',
-      '',
-      'CHARSET:',
-    ];
-    for (let ci = 0; ci < chars.length; ci++) {
-      const ascii = 32 + ci;
-      const glyph = ascii > 32 && ascii < 127 ? String.fromCharCode(ascii) : 'SPC';
-      lines.push(`; ${ci} (ASCII ${ascii} '${glyph}')`);
-      const rowBytes = chars[ci].map((row) => {
-        let b = 0;
-        row.forEach((px, bit) => { if (px) b |= 0x80 >> bit; });
-        return `%${b.toString(2).padStart(8, '0')}`;
-      });
-      lines.push(`DEFB ${rowBytes.slice(0, 4).join(', ')}`);
-      lines.push(`DEFB ${rowBytes.slice(4).join(', ')}`);
-    }
-    downloadBlob(
-      new Blob([lines.join('\n')], { type: 'text/plain' }),
-      `${fileName}_charset.asm`
-    );
-  }, [chars, fileName]);
-
   const exportChr = useCallback(() => {
     downloadBlob(
       new Blob([charsToBinary(chars).buffer as ArrayBuffer], { type: 'application/octet-stream' }),
@@ -170,7 +145,6 @@ export function useCharsetProject({
     projectInputRef,
     chrInputRef,
     saveProject,
-    exportASM,
     exportChr,
     loadProject,
     loadChr,

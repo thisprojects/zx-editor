@@ -56,7 +56,6 @@ describe('useCharsetProject', () => {
       const { result } = renderHook(() => useCharsetProject(props));
 
       expect(typeof result.current.saveProject).toBe('function');
-      expect(typeof result.current.exportASM).toBe('function');
       expect(typeof result.current.exportChr).toBe('function');
       expect(typeof result.current.loadProject).toBe('function');
       expect(typeof result.current.loadChr).toBe('function');
@@ -116,40 +115,6 @@ describe('useCharsetProject', () => {
     });
   });
 
-  describe('exportASM', () => {
-    it('should trigger a download', () => {
-      const props = createDefaultProps();
-      props.chars[0][0][0] = true;
-      const { result } = renderHook(() => useCharsetProject(props));
-
-      act(() => { result.current.exportASM(); });
-
-      expect(mockClick).toHaveBeenCalled();
-    });
-
-    it('should download with _charset.asm suffix', () => {
-      let downloadAttr = '';
-      jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-        const el = originalCreateElement(tag);
-        if (tag === 'a') {
-          el.click = mockClick;
-          Object.defineProperty(el, 'download', {
-            set(v) { downloadAttr = v; },
-            get() { return downloadAttr; },
-          });
-        }
-        return el;
-      });
-
-      const props = createDefaultProps();
-      props.fileName = 'myfont';
-      const { result } = renderHook(() => useCharsetProject(props));
-
-      act(() => { result.current.exportASM(); });
-
-      expect(downloadAttr).toBe('myfont_charset.asm');
-    });
-  });
 
   describe('exportChr', () => {
     it('should trigger a download', () => {

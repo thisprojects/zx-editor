@@ -2,7 +2,7 @@
 
 interface FileNameModalProps {
   isOpen: boolean;
-  action: 'save' | 'export' | 'exportScr' | null;
+  action: 'save' | 'export' | 'exportScr' | 'exportChr' | null;
   fileName: string;
   onFileNameChange: (name: string) => void;
   onConfirm: () => void;
@@ -21,9 +21,9 @@ export function FileNameModal({
 }: FileNameModalProps) {
   if (!isOpen) return null;
 
-  const title = action === 'save' ? 'Save Project' : action === 'exportScr' ? 'Export SCR' : 'Export ASM';
-  const extension = action === 'save' ? '.json' : action === 'exportScr' ? '.scr' : '.asm';
-  const confirmLabel = action === 'save' ? 'Save' : action === 'exportScr' ? 'Export SCR' : 'Export ASM';
+  const title = action === 'save' ? 'Save Project' : action === 'exportScr' ? 'Export SCR' : action === 'exportChr' ? 'Export CHR' : 'Export ASM';
+  const extension = action === 'save' ? '.json' : action === 'exportScr' ? '.scr' : action === 'exportChr' ? '.chr' : '.asm';
+  const confirmLabel = action === 'save' ? 'Save' : action === 'exportScr' ? 'Export SCR' : action === 'exportChr' ? 'Export CHR' : 'Export ASM';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -48,7 +48,7 @@ export function FileNameModal({
             </span>
           </div>
         </div>
-        {(action === 'export' || action === 'exportScr') && docsLink && (
+        {(action === 'export' || action === 'exportScr' || action === 'exportChr') && docsLink && (
           <p className="mb-4 text-sm text-gray-400">
             <a
               href={docsLink.href}

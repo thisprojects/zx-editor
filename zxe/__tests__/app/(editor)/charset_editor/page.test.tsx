@@ -30,18 +30,19 @@ jest.mock('@/hooks/useCharsetDrawing', () => ({
   }),
 }));
 
+const mockCharsetProject = {
+  projectInputRef: { current: null },
+  chrInputRef: { current: null },
+  saveProject: jest.fn(),
+  exportChr: jest.fn(),
+  loadProject: jest.fn(),
+  loadChr: jest.fn(),
+  triggerLoadDialog: jest.fn(),
+  triggerLoadChrDialog: jest.fn(),
+};
+
 jest.mock('@/hooks/useCharsetProject', () => ({
-  useCharsetProject: () => ({
-    projectInputRef: { current: null },
-    chrInputRef: { current: null },
-    saveProject: jest.fn(),
-    exportASM: jest.fn(),
-    exportChr: jest.fn(),
-    loadProject: jest.fn(),
-    loadChr: jest.fn(),
-    triggerLoadDialog: jest.fn(),
-    triggerLoadChrDialog: jest.fn(),
-  }),
+  useCharsetProject: () => mockCharsetProject,
 }));
 
 jest.mock('@/hooks/useUndoRedoShortcuts', () => ({
@@ -108,6 +109,47 @@ describe('Charset Editor page', () => {
       fireEvent.click(screen.getByRole('checkbox'));
       fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
       expect(localStorage.getItem('charsetEditor_hideInstructions')).toBe('true');
+    });
+  });
+
+  describe('Export CHR modal', () => {
+    it('opens the filename modal when Export CHR is clicked', () => {
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Export CHR'));
+      expect(screen.getByRole('heading', { name: 'Export CHR' })).toBeInTheDocument();
+    });
+
+    it('does not export immediately when Export CHR is clicked', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Export CHR'));
+      expect(project.exportChr).not.toHaveBeenCalled();
+    });
+
+    it('calls exportChr and closes the modal when confirmed', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Export CHR'));
+      const buttons = screen.getAllByRole('button', { name: 'Export CHR' });
+      fireEvent.click(buttons[buttons.length - 1]);
+      expect(project.exportChr).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('heading', { name: 'Export CHR' })).not.toBeInTheDocument();
+    });
+
+    it('closes the modal without exporting when cancelled', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Export CHR'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(project.exportChr).not.toHaveBeenCalled();
+      expect(screen.queryByRole('heading', { name: 'Export CHR' })).not.toBeInTheDocument();
+    });
+
+    it('shows a link to the charset ASM example', () => {
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Export CHR'));
+      const link = screen.getByRole('link', { name: /How do I display this on a Z80\?/i });
+      expect(link).toHaveAttribute('href', '/charset_examples.html');
     });
   });
 });

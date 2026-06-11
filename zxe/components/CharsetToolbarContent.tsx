@@ -21,7 +21,6 @@ interface CharsetToolbarContentProps {
   onLoad: () => void;
   onLoadChr: () => void;
   onSave: () => void;
-  onExportAsm: () => void;
   onExportChr: () => void;
   onClearChar: () => void;
   onClearAll: () => void;
@@ -43,7 +42,6 @@ export function CharsetToolbarContent({
   onLoad,
   onLoadChr,
   onSave,
-  onExportAsm,
   onExportChr,
   onClearChar,
   onClearAll,
@@ -157,12 +155,6 @@ export function CharsetToolbarContent({
             className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 text-xs"
           >
             Save JSON
-          </button>
-          <button
-            onClick={onExportAsm}
-            className="px-2 py-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 text-xs"
-          >
-            Export ASM
           </button>
           <button
             onClick={onExportChr}

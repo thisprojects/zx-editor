@@ -9,12 +9,15 @@ import { CharsetToolbarContent } from '@/components/CharsetToolbarContent';
 import { CharsetGridCanvas } from '@/components/CharsetGridCanvas';
 import { CharsetPixelCanvas } from '@/components/CharsetPixelCanvas';
 import { CharsetInstructionsModal, shouldShowCharsetInstructions } from '@/components/CharsetInstructionsModal';
+import { FileNameModal } from '@/components/FileNameModal';
 import { CHARSET_COUNT } from '@/constants';
 
 export default function CharsetEditorPage() {
   const [fileName, setFileName] = useState('charset');
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalAction, setModalAction] = useState<'exportChr' | null>(null);
 
   useEffect(() => {
     setShowInstructions(shouldShowCharsetInstructions());
@@ -36,6 +39,19 @@ export default function CharsetEditorPage() {
       .fill(null)
       .map(() => Array(8).fill(false));
 
+  const handleModalConfirm = () => {
+    if (modalAction === 'exportChr') {
+      project.exportChr();
+    }
+    setShowModal(false);
+    setModalAction(null);
+  };
+
+  const handleModalCancel = () => {
+    setShowModal(false);
+    setModalAction(null);
+  };
+
   const ascii = 32 + drawing.selectedChar;
   const glyph = ascii > 32 && ascii < 127 ? ` '${String.fromCharCode(ascii)}'` : ' SPACE';
 
@@ -46,7 +62,7 @@ export default function CharsetEditorPage() {
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Charset Editor"
         infoId="charset-editor-info"
-        infoDescription={`Edit all ${CHARSET_COUNT} characters (ASCII 32–127) of a custom ZX Spectrum character set. Click a character in the overview grid to select it, then draw in the pixel editor below. Export as .chr binary for use with other ZX tools, or .asm for direct assembly inclusion.`}
+        infoDescription={`Edit all ${CHARSET_COUNT} characters (ASCII 32–127) of a custom ZX Spectrum character set. Click a character in the overview grid to select it, then draw in the pixel editor below. Export as .chr binary for use with other ZX tools.`}
       >
         <CharsetToolbarContent
           currentTool={drawing.currentTool}
@@ -64,8 +80,10 @@ export default function CharsetEditorPage() {
           onLoad={project.triggerLoadDialog}
           onLoadChr={project.triggerLoadChrDialog}
           onSave={project.saveProject}
-          onExportAsm={project.exportASM}
-          onExportChr={project.exportChr}
+          onExportChr={() => {
+            setModalAction('exportChr');
+            setShowModal(true);
+          }}
           onClearChar={() => drawing.clearChar(drawing.selectedChar)}
           onClearAll={drawing.clearAll}
         />
@@ -135,6 +153,20 @@ export default function CharsetEditorPage() {
 
         </div>
       </div>
+      <FileNameModal
+        isOpen={showModal}
+        action={modalAction}
+        fileName={fileName}
+        onFileNameChange={setFileName}
+        onConfirm={handleModalConfirm}
+        onCancel={handleModalCancel}
+        docsLink={{
+          href: '/charset_examples.html',
+          description:
+            'the Charset ASM example shows how to load an exported .chr file and display it on screen.',
+        }}
+      />
+
       <CharsetInstructionsModal
         isOpen={showInstructions}
         onClose={() => setShowInstructions(false)}

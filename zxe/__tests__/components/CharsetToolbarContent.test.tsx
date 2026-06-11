@@ -17,7 +17,6 @@ const createDefaultProps = () => ({
   onLoad: jest.fn(),
   onLoadChr: jest.fn(),
   onSave: jest.fn(),
-  onExportAsm: jest.fn(),
   onExportChr: jest.fn(),
   onClearChar: jest.fn(),
   onClearAll: jest.fn(),
@@ -209,11 +208,6 @@ describe('CharsetToolbarContent', () => {
       expect(screen.getByText('Save JSON')).toBeInTheDocument();
     });
 
-    it('should render Export ASM button', () => {
-      render(<CharsetToolbarContent {...createDefaultProps()} />);
-      expect(screen.getByText('Export ASM')).toBeInTheDocument();
-    });
-
     it('should render Export CHR button', () => {
       render(<CharsetToolbarContent {...createDefaultProps()} />);
       expect(screen.getByText('Export CHR')).toBeInTheDocument();
@@ -241,14 +235,6 @@ describe('CharsetToolbarContent', () => {
 
       fireEvent.click(screen.getByText('Save JSON'));
       expect(props.onSave).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onExportAsm when Export ASM is clicked', () => {
-      const props = createDefaultProps();
-      render(<CharsetToolbarContent {...props} />);
-
-      fireEvent.click(screen.getByText('Export ASM'));
-      expect(props.onExportAsm).toHaveBeenCalledTimes(1);
     });
 
     it('should call onExportChr when Export CHR is clicked', () => {
