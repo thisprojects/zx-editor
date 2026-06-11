@@ -152,4 +152,37 @@ describe('Charset Editor page', () => {
       expect(link).toHaveAttribute('href', '/charset_examples.html');
     });
   });
+
+  describe('Save JSON modal', () => {
+    it('opens the filename modal when Save JSON is clicked', () => {
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Save JSON'));
+      expect(screen.getByRole('heading', { name: 'Save Project' })).toBeInTheDocument();
+    });
+
+    it('does not save immediately when Save JSON is clicked', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Save JSON'));
+      expect(project.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('calls saveProject and closes the modal when confirmed', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Save JSON'));
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      expect(project.saveProject).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('heading', { name: 'Save Project' })).not.toBeInTheDocument();
+    });
+
+    it('closes the modal without saving when cancelled', () => {
+      const project = mockCharsetProject;
+      render(<CharsetEditorPage />);
+      fireEvent.click(screen.getByText('Save JSON'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(project.saveProject).not.toHaveBeenCalled();
+      expect(screen.queryByRole('heading', { name: 'Save Project' })).not.toBeInTheDocument();
+    });
+  });
 });

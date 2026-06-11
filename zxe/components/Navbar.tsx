@@ -18,6 +18,7 @@ const docItems = [
   { href: '/asm_examples.html', label: 'ASM Example: UDG' },
   { href: '/player_sprite_examples.html', label: 'ASM Example: Player Sprite' },
   { href: '/scene_examples.html', label: 'ASM Example: Scene' },
+  { href: '/charset_examples.html', label: 'ASM Example: Charset' },
 ];
 
 export function Navbar() {

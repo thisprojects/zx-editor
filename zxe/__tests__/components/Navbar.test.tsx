@@ -1,4 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import { Navbar } from '@/components/Navbar';
 
 // Mock next/navigation
@@ -191,6 +193,24 @@ describe('Navbar', () => {
 
       const link = screen.getByRole('link', { name: 'ASM Example: UDG' });
       expect(link).toHaveAttribute('href', '/asm_examples.html');
+    });
+
+    it('should include a doc link for every *_examples.html file in public/', () => {
+      const publicDir = path.join(__dirname, '../../public');
+      const exampleFiles = fs
+        .readdirSync(publicDir)
+        .filter((f) => f.endsWith('_examples.html'));
+
+      mockUsePathname.mockReturnValue('/sprite_editor');
+      render(<Navbar />);
+
+      fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+
+      const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+
+      for (const file of exampleFiles) {
+        expect(hrefs).toContain(`/${file}`);
+      }
     });
 
     it('should link to the Player Sprite ASM example with correct href', () => {

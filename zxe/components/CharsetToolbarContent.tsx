@@ -16,8 +16,6 @@ interface CharsetToolbarContentProps {
   canRedo: boolean;
   historyIndex: number;
   selectedChar: number;
-  fileName: string;
-  onFileNameChange: (name: string) => void;
   onLoad: () => void;
   onLoadChr: () => void;
   onSave: () => void;
@@ -37,8 +35,6 @@ export function CharsetToolbarContent({
   canRedo,
   historyIndex,
   selectedChar,
-  fileName,
-  onFileNameChange,
   onLoad,
   onLoadChr,
   onSave,
@@ -128,14 +124,6 @@ export function CharsetToolbarContent({
 
       {/* File */}
       <div className="border border-gray-600 rounded p-2">
-        <div className="text-xs text-gray-400 mb-1">Filename</div>
-        <input
-          type="text"
-          value={fileName}
-          onChange={(e) => onFileNameChange(e.target.value)}
-          className="w-full px-2 py-1 rounded bg-gray-700 text-white border border-gray-600 text-xs mb-2"
-          placeholder="charset"
-        />
         <div className="text-xs text-gray-400 mb-1">File</div>
         <div className="flex flex-col gap-1">
           <button

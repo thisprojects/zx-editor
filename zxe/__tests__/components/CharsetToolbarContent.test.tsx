@@ -12,8 +12,6 @@ const createDefaultProps = () => ({
   canRedo: false,
   historyIndex: 1,
   selectedChar: 0,
-  fileName: 'charset',
-  onFileNameChange: jest.fn(),
   onLoad: jest.fn(),
   onLoadChr: jest.fn(),
   onSave: jest.fn(),
@@ -176,21 +174,11 @@ describe('CharsetToolbarContent', () => {
   });
 
   describe('file controls', () => {
-    it('should render the filename input', () => {
+    it('should not render a filename input', () => {
       const props = createDefaultProps();
       render(<CharsetToolbarContent {...props} />);
 
-      const input = screen.getByDisplayValue('charset');
-      expect(input).toBeInTheDocument();
-    });
-
-    it('should call onFileNameChange when filename input changes', () => {
-      const props = createDefaultProps();
-      render(<CharsetToolbarContent {...props} />);
-
-      const input = screen.getByDisplayValue('charset');
-      fireEvent.change(input, { target: { value: 'myfont' } });
-      expect(props.onFileNameChange).toHaveBeenCalledWith('myfont');
+      expect(screen.queryByDisplayValue('charset')).not.toBeInTheDocument();
     });
 
     it('should render Load JSON button', () => {

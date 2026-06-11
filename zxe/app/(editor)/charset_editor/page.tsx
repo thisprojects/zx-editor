@@ -17,7 +17,7 @@ export default function CharsetEditorPage() {
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [modalAction, setModalAction] = useState<'exportChr' | null>(null);
+  const [modalAction, setModalAction] = useState<'save' | 'exportChr' | null>(null);
 
   useEffect(() => {
     setShowInstructions(shouldShowCharsetInstructions());
@@ -40,7 +40,9 @@ export default function CharsetEditorPage() {
       .map(() => Array(8).fill(false));
 
   const handleModalConfirm = () => {
-    if (modalAction === 'exportChr') {
+    if (modalAction === 'save') {
+      project.saveProject();
+    } else if (modalAction === 'exportChr') {
       project.exportChr();
     }
     setShowModal(false);
@@ -75,11 +77,12 @@ export default function CharsetEditorPage() {
           canRedo={drawing.canRedo}
           historyIndex={drawing.historyIndex}
           selectedChar={drawing.selectedChar}
-          fileName={fileName}
-          onFileNameChange={setFileName}
           onLoad={project.triggerLoadDialog}
           onLoadChr={project.triggerLoadChrDialog}
-          onSave={project.saveProject}
+          onSave={() => {
+            setModalAction('save');
+            setShowModal(true);
+          }}
           onExportChr={() => {
             setModalAction('exportChr');
             setShowModal(true);
