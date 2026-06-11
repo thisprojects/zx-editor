@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charset ASM Example: Displaying an Exported Custom Font on Z80 Hardware</title>
+<style>
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #e0e0e0;
+    --text-dim: #a0a0b0;
+    --code-bg: #0d1117;
+    --code-border: #30363d;
+    --link: #58a6ff;
+    --heading: #f0f0f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+}
+h1, h2, h3 { color: var(--heading); margin-top: 2.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; border-bottom: 2px solid var(--accent2); padding-bottom: 0.3rem; }
+h3 { font-size: 1.2rem; color: var(--accent); }
+p { margin-bottom: 1rem; }
+ul, ol { margin: 0 0 1rem 1.5rem; }
+li { margin-bottom: 0.3rem; }
+.title-block {
+    text-align: center;
+    padding: 3rem 1rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-radius: 12px;
+    border: 1px solid var(--accent2);
+}
+.title-block h1 { border: none; font-size: 2.5rem; margin-top: 0; }
+.title-block .subtitle { font-size: 1.2rem; color: var(--text-dim); margin-top: 0.5rem; }
+.title-block .assembler { font-size: 0.9rem; color: var(--accent); font-family: monospace; margin-top: 1rem; }
+pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    color: #7ee787;
+}
+pre code { color: #c9d1d9; }
+.comment { color: #8b949e; }
+.keyword { color: #ff7b72; }
+.label { color: #d2a8ff; }
+.string { color: #a5d6ff; }
+.number { color: #79c0ff; }
+.directive { color: #ffa657; }
+.bold-text { font-weight: 700; }
+a { color: var(--link); }
+.back-to-top {
+    display: inline-block;
+    margin-top: 0.3rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+}
+.back-to-top:hover { color: var(--link); }
+section { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--code-border); }
+section:last-child { border-bottom: none; }
+
+/* Layout: sidebar + content */
+.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+.sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.sidebar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--heading);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--accent2);
+}
+.sidebar-toggle:hover { color: var(--link); }
+.sidebar-arrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+}
+.sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+.sidebar-list.open {
+    max-height: 30rem;
+    padding-top: 0.5rem;
+}
+.sidebar-list li { margin: 0; }
+.sidebar-list a {
+    display: block;
+    padding: 0.4rem 0.6rem 0.4rem 1.6rem;
+    border-radius: 4px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.sidebar-list a:hover {
+    background: var(--surface2);
+    color: var(--link);
+}
+.content {
+    flex: 1;
+    min-width: 0;
+    max-width: 900px;
+}
+@media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <button class="sidebar-toggle" id="examples-toggle" aria-expanded="true" aria-controls="examples-list" onclick="toggleExamplesMenu()">
+        <span class="sidebar-arrow" id="examples-arrow">&#9660;</span>
+        Examples
+      </button>
+      <ul class="sidebar-list open" id="examples-list">
+        <li><a href="/asm_examples.html">UDG</a></li>
+        <li><a href="/player_sprite_examples.html">Player Sprite</a></li>
+        <li><a href="/scene_examples.html">Scene</a></li>
+        <li><a href="/charset_examples.html">Charset</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="title-block">
+      <h1>Charset ASM Example</h1>
+      <div class="subtitle">Displaying a Custom Font on Real Z80 Hardware</div>
+      <div class="assembler">by Norbert of Norbsoft</div>
+    </div>
+
+    <section id="introduction">
+      <p>The Charset Editor lets you redesign the ZX Spectrum&#x27;s 96-character font (ASCII 32-127) and export it as a raw <code>.chr</code> file — 8 bytes per character, 768 bytes in total. <code>charset_viewer.asm</code> is a minimal companion program that <code>incbin</code>s that exported file and stamps every character of the new font directly onto the screen, writing pixel bytes <strong>directly into screen memory</strong> — no ROM calls, so it works identically on a 48K or 128K machine regardless of which ROM is paged in.</p>
+      <p class="bold-text">This example is written for Pasmo with the --tapbas flag, producing a .tap file that auto-runs in an emulator such as Fuse with --auto-load — exactly the workflow described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>.</p>
+    </section>
+
+    <section id="charset-example">
+      <h1>Charset: Displaying an Exported Font</h1>
+      <a href="#" class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">[Back to top]</a>
+
+      <p>Unlike the UDG and Player Sprite editors, the Charset Editor&#x27;s most useful export format is <code>.chr</code> — a compact binary blob with no header, just 768 raw pixel bytes (96 characters x 8 bytes each), in ASCII order starting at character 32 (space). The viewer pulls this data in with <code>incbin</code>, which embeds the file&#x27;s bytes verbatim at assembly time.</p>
+
+      <h2 id="charset-loading">Loading the Font Data</h2>
+      <p>The 768 bytes from the <code>.chr</code> file are first copied into a RAM buffer with <code>ldir</code>. This isn&#x27;t strictly necessary for this demo — the viewer could read straight from the <code>incbin</code>'d data — but it mirrors how a real program would work: copying the font into RAM is the first step toward pointing the ZX Spectrum&#x27;s <code>CHARS</code> system variable (<code>23606/23607</code>) at it, so your custom font replaces the system font for every subsequent <code>print</code>.</p>
+      <pre><code><span class="comment">; Copy .chr data into RAM buffer</span>
+        <span class="keyword">ld</span>      hl, chr_data
+        <span class="keyword">ld</span>      de, chr_buf
+        <span class="keyword">ld</span>      bc, <span class="number">768</span>         <span class="comment">; 96 chars x 8 bytes</span>
+        <span class="keyword">ldir</span></code></pre>
+
+      <h2 id="charset-clearing">Clearing the Screen</h2>
+      <p>Before drawing, the viewer blanks the entire 6144-byte pixel display file (<code>$4000-$57FF</code>) and sets every attribute cell to <code>$38</code> — <strong>PAPER 7 (white), INK 0 (black)</strong> — so the new font&#x27;s glyphs show up as black-on-white regardless of whatever was on screen before:</p>
+      <pre><code><span class="comment">; Clear pixel memory ($4000-$57FF = 6144 bytes)</span>
+        <span class="keyword">ld</span>      hl, $4000
+        <span class="keyword">ld</span>      de, $4001
+        <span class="keyword">ld</span>      bc, $17FF
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">ldir</span>
+
+<span class="comment">; Set all attributes to PAPER 7 (white), INK 0 (black) = $38</span>
+        <span class="keyword">ld</span>      hl, $5800
+        <span class="keyword">ld</span>      de, $5801
+        <span class="keyword">ld</span>      bc, $02FF
+        <span class="keyword">ld</span>      (hl), $38
+        <span class="keyword">ldir</span></code></pre>
+
+      <h2 id="charset-draw-loop">The Draw Loop</h2>
+      <p>The 95 visible characters (ASCII 32-126) are drawn in reading order, filling 32 columns per row. At 95 characters that&#x27;s 3 character rows (32 + 32 + 31) — small enough to fit entirely within screen &quot;third&quot; 0 (<code>$4000-$47FF</code>, character rows 0-7), so the address arithmetic is simple: for character row <code>D</code>, column <code>E</code> and scan line <code>Y</code> (0-7), the screen address is <code>$4000 + Y*256 + D*32 + E</code>.</p>
+      <pre><code><span class="keyword">ld</span>      ix, chr_buf     <span class="comment">; IX -&gt; font data for current character</span>
+        <span class="keyword">ld</span>      d, <span class="number">0</span>            <span class="comment">; D = character row (0, 1, 2)</span>
+        <span class="keyword">ld</span>      e, <span class="number">0</span>            <span class="comment">; E = character column (0-31)</span>
+        <span class="keyword">ld</span>      b, <span class="number">95</span>           <span class="comment">; 95 characters to draw</span>
+
+<span class="label">draw_loop</span>:
+        <span class="keyword">push</span>    bc
+
+        <span class="comment">; Low byte of screen address for this cell = D*32 + E</span>
+        <span class="keyword">ld</span>      a, d
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a            <span class="comment">; A = D * 32</span>
+        <span class="keyword">add</span>     a, e
+        <span class="keyword">ld</span>      c, a            <span class="comment">; C = base low byte (same for all 8 scan lines)</span>
+
+        <span class="comment">; Stamp all 8 scan lines of this character</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+        <span class="keyword">ld</span>      h, $40          <span class="comment">; high byte = $40 + scan line y</span>
+<span class="label">draw_scan</span>:
+        <span class="keyword">ld</span>      l, c            <span class="comment">; low byte = D*32 + E</span>
+        <span class="keyword">ld</span>      a, (ix)         <span class="comment">; font byte</span>
+        <span class="keyword">ld</span>      (hl), a         <span class="comment">; write pixel row to screen</span>
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     h               <span class="comment">; advance to next scan line</span>
+        <span class="keyword">djnz</span>    draw_scan
+
+        <span class="comment">; Move to next character position; wrap column at 32</span>
+        <span class="keyword">inc</span>     e
+        <span class="keyword">ld</span>      a, e
+        <span class="keyword">cp</span>      <span class="number">32</span>
+        <span class="keyword">jr</span>      nz, next_char
+        <span class="keyword">ld</span>      e, <span class="number">0</span>
+        <span class="keyword">inc</span>     d
+<span class="label">next_char</span>:
+        <span class="keyword">pop</span>     bc
+        <span class="keyword">djnz</span>    draw_loop</code></pre>
+      <p>Because each character is exactly 8 bytes wide in the <code>.chr</code> file and characters are stored in ASCII order from 32 upwards, <code>IX</code> simply walks straight through <code>chr_buf</code> one byte at a time — the 95th character drawn (ASCII 126, <code>~</code>) is the 95th 8-byte block in the file.</p>
+
+      <h2 id="charset-border-flags">Border Flags and the Halt Loop</h2>
+      <p>As with the other examples, two <code>out (254), a</code> calls bracket the work: the border turns <strong>red</strong> the instant the program starts, and <strong>white</strong> once the whole font has been drawn. The program then idles forever in a <code>halt</code> / <code>jr halt_loop</code> pair.</p>
+
+      <h2 id="charset-source">Source: charset_viewer.asm</h2>
+      <p>This is the complete viewer. The <code>incbin "myfont.chr"</code> line at the bottom names the exported <code>.chr</code> file it expects to find alongside it.</p>
+      <p class="bold-text">You will need to rename <code>myfont.chr</code> in the <code>incbin</code> line to match whatever filename your own exported charset was saved as — and remember, this example only works with a <strong>CHR</strong> export from the Charset Editor (the binary 768-byte font), not an ASM export.</p>
+      <pre><code><span class="comment">; charset_viewer.asm</span>
+<span class="comment">;</span>
+<span class="comment">; Displays a custom ZX Spectrum character set from a .chr file.</span>
+<span class="comment">; Characters are written directly to screen memory — no ROM calls,</span>
+<span class="comment">; works on 48K or 128K regardless of which ROM is active.</span>
+<span class="comment">;</span>
+<span class="comment">; Assemble:  pasmo --tapbas charset_viewer.asm charset_viewer.tap</span>
+<span class="comment">; Run:       fuse --auto-load charset_viewer.tap</span>
+
+        <span class="directive">org</span>     <span class="number">$8000</span>
+
+<span class="label">start</span>:
+        <span class="comment">; Red border = code is running</span>
+        <span class="keyword">ld</span>      a, <span class="number">2</span>
+        <span class="keyword">out</span>     (254), a
+
+        <span class="comment">; Copy .chr data into RAM buffer</span>
+        <span class="keyword">ld</span>      hl, chr_data
+        <span class="keyword">ld</span>      de, chr_buf
+        <span class="keyword">ld</span>      bc, <span class="number">768</span>         <span class="comment">; 96 chars x 8 bytes</span>
+        <span class="keyword">ldir</span>
+
+        <span class="comment">; Clear pixel memory ($4000-$57FF = 6144 bytes)</span>
+        <span class="keyword">ld</span>      hl, $4000
+        <span class="keyword">ld</span>      de, $4001
+        <span class="keyword">ld</span>      bc, $17FF
+        <span class="keyword">ld</span>      (hl), <span class="number">0</span>
+        <span class="keyword">ldir</span>
+
+        <span class="comment">; Set all attributes to PAPER 7 (white), INK 0 (black) = $38</span>
+        <span class="keyword">ld</span>      hl, $5800
+        <span class="keyword">ld</span>      de, $5801
+        <span class="keyword">ld</span>      bc, $02FF
+        <span class="keyword">ld</span>      (hl), $38
+        <span class="keyword">ldir</span>
+
+        <span class="comment">; Draw 95 characters (ASCII 32-126) directly to screen memory.</span>
+        <span class="comment">;</span>
+        <span class="comment">; The Spectrum screen layout for character row R (0-7), column C (0-31),</span>
+        <span class="comment">; scan line Y (0-7) within the first screen third:</span>
+        <span class="comment">;   address = $4000 + Y*256 + R*32 + C</span>
+        <span class="comment">;</span>
+        <span class="comment">; Our 95 chars span rows 0-2 (32+32+31), all within the first third,</span>
+        <span class="comment">; so this simplified formula applies throughout.</span>
+
+        <span class="keyword">ld</span>      ix, chr_buf     <span class="comment">; IX -&gt; font data for current character</span>
+        <span class="keyword">ld</span>      d, <span class="number">0</span>            <span class="comment">; D = character row (0, 1, 2)</span>
+        <span class="keyword">ld</span>      e, <span class="number">0</span>            <span class="comment">; E = character column (0-31)</span>
+        <span class="keyword">ld</span>      b, <span class="number">95</span>           <span class="comment">; 95 characters to draw</span>
+
+<span class="label">draw_loop</span>:
+        <span class="keyword">push</span>    bc
+
+        <span class="comment">; Low byte of screen address for this cell = D*32 + E</span>
+        <span class="keyword">ld</span>      a, d
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a
+        <span class="keyword">add</span>     a, a            <span class="comment">; A = D * 32</span>
+        <span class="keyword">add</span>     a, e
+        <span class="keyword">ld</span>      c, a            <span class="comment">; C = base low byte (same for all 8 scan lines)</span>
+
+        <span class="comment">; Stamp all 8 scan lines of this character</span>
+        <span class="keyword">ld</span>      b, <span class="number">8</span>
+        <span class="keyword">ld</span>      h, $40          <span class="comment">; high byte = $40 + scan line y</span>
+<span class="label">draw_scan</span>:
+        <span class="keyword">ld</span>      l, c            <span class="comment">; low byte = D*32 + E</span>
+        <span class="keyword">ld</span>      a, (ix)         <span class="comment">; font byte</span>
+        <span class="keyword">ld</span>      (hl), a         <span class="comment">; write pixel row to screen</span>
+        <span class="keyword">inc</span>     ix
+        <span class="keyword">inc</span>     h               <span class="comment">; advance to next scan line</span>
+        <span class="keyword">djnz</span>    draw_scan
+
+        <span class="comment">; Move to next character position; wrap column at 32</span>
+        <span class="keyword">inc</span>     e
+        <span class="keyword">ld</span>      a, e
+        <span class="keyword">cp</span>      <span class="number">32</span>
+        <span class="keyword">jr</span>      nz, next_char
+        <span class="keyword">ld</span>      e, <span class="number">0</span>
+        <span class="keyword">inc</span>     d
+<span class="label">next_char</span>:
+        <span class="keyword">pop</span>     bc
+        <span class="keyword">djnz</span>    draw_loop
+
+        <span class="comment">; White border = display ready</span>
+        <span class="keyword">ld</span>      a, <span class="number">7</span>
+        <span class="keyword">out</span>     (254), a
+
+<span class="label">halt_loop</span>:
+        <span class="keyword">halt</span>
+        <span class="keyword">jr</span>      halt_loop
+
+<span class="comment">; ── data ─────────────────────────────────────────────────────────────────────</span>
+
+<span class="label">chr_buf</span>:
+        <span class="directive">defs</span>    <span class="number">768</span>             <span class="comment">; RAM workspace filled at startup by ldir</span>
+
+<span class="label">chr_data</span>:
+        <span class="directive">incbin</span>  <span class="string">"myfont.chr"</span>    <span class="comment">; rename to match your exported .chr filename</span>
+
+        <span class="directive">end</span>     start</code></pre>
+
+      <h2 id="charset-running">Assembling and Running</h2>
+      <p>To try this with your own font: in the Charset Editor, design your characters and use <strong>Export CHR</strong> — this example only works with the binary <code>.chr</code> export, not the ASM export, since <code>charset_viewer.asm</code> uses <code>incbin</code> to pull in raw bytes directly. Save the <code>.chr</code> file in the same folder as <code>charset_viewer.asm</code> and edit the <code>incbin</code> line — currently <code>incbin "myfont.chr"</code> — to match whatever filename your export was saved as. Then assemble and run it exactly as described in the <a href="/z80_book.html">Z80 Assembly Introduction</a>:</p>
+      <pre><code>pasmo --tapbas charset_viewer.asm charset_viewer.tap &amp;&amp; fuse --tape charset_viewer.tap --auto-load</code></pre>
+      <p>The <code>--tapbas</code> flag wraps the assembled machine code in a small BASIC loader so the resulting <code>.tap</code> auto-runs when loaded; <code>--auto-load</code> tells Fuse to insert and run the tape image immediately on startup. You should see the border flash red, your custom font fill the top three rows of a white screen, and the border settle to white once drawing is complete.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function toggleExamplesMenu() {
+    var list = document.getElementById('examples-list');
+    var btn = document.getElementById('examples-toggle');
+    var arrow = document.getElementById('examples-arrow');
+    var isOpen = list.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    arrow.innerHTML = isOpen ? '&#9660;' : '&#9658;';
+}
+</script>
+
+</body>
+</html>

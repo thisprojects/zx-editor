@@ -81,8 +81,22 @@ export function CharsetInstructionsModal({ isOpen, onClose }: CharsetInstruction
                 labelled by ASCII value. Useful if you want to hand-tweak glyphs directly in your source.
               </li>
             </ul>
-            <p className="mt-3 text-gray-400 text-xs">
-              A full example showing how to load a custom charset in Z80 assembly will be added to the documentation.
+            <p className="mt-2">
+              Not sure what to do with the exported file?{' '}
+              <a
+                href="/charset_examples.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                See the Charset ASM example
+              </a>
+              {' '}— it walks through a complete viewer program and shows you how to assemble and run your
+              exported <code className="bg-gray-700 px-1 rounded">.chr</code> file on a Z80 using{' '}
+              <code className="bg-gray-700 px-1 rounded">pasmo</code> with{' '}
+              <code className="bg-gray-700 px-1 rounded">--tapbas</code> and{' '}
+              <code className="bg-gray-700 px-1 rounded">fuse</code> with{' '}
+              <code className="bg-gray-700 px-1 rounded">--auto-load</code>.
             </p>
           </section>
 

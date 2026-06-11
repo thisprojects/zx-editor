@@ -43,6 +43,13 @@ describe('CharsetInstructionsModal', () => {
       render(<CharsetInstructionsModal isOpen={true} onClose={onClose} />);
       expect(screen.getByText(/colour is not stored in the font/i)).toBeInTheDocument();
     });
+
+    it('links to the charset ASM example page', () => {
+      render(<CharsetInstructionsModal isOpen={true} onClose={onClose} />);
+      const link = screen.getByRole('link', { name: /Charset ASM example/i });
+      expect(link).toHaveAttribute('href', '/charset_examples.html');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
   });
 
   describe('close button', () => {
