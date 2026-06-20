@@ -64,6 +64,32 @@ export function CharsetInstructionsModal({ isOpen, onClose }: CharsetInstruction
           </section>
 
           <section>
+            <h3 className="text-base font-semibold text-white mb-2">Using Third-Party Charsets</h3>
+            <p>
+              Any raw binary file containing 96 × 8 bytes of bitmap data can be loaded here — regardless
+              of file extension. If you have a <code className="bg-gray-700 px-1 rounded">.ch8</code> file
+              (or another extension like <code className="bg-gray-700 px-1 rounded">.bin</code>), just rename
+              it to <code className="bg-gray-700 px-1 rounded">.chr</code> and open it with{' '}
+              <span className="font-semibold text-white">Load CHR</span>. No conversion needed — these are
+              all the same raw 8-bytes-per-character format.
+            </p>
+            <p className="mt-2">
+              A great source of ready-made ZX Spectrum charsets is{' '}
+              <a
+                href="https://damieng.com/typography/zx-origins/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                ZX Origins by Damien Guard
+              </a>
+              {' '}— a free collection of hundreds of authentic 8×8 bitmap fonts, each downloadable as a ZIP
+              that includes a <code className="bg-gray-700 px-1 rounded">.ch8</code> file. Rename it to{' '}
+              <code className="bg-gray-700 px-1 rounded">.chr</code> and load it straight into this editor.
+            </p>
+          </section>
+
+          <section>
             <h3 className="text-base font-semibold text-white mb-2">Exporting</h3>
             <p>
               <span className="font-semibold text-white">Export CHR</span> — a compact raw binary file,
