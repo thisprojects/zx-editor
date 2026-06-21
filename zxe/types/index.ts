@@ -110,6 +110,46 @@ export interface CharsetProjectData {
   chars: boolean[][][]; // [charIndex][row][col]
 }
 
+// Music Editor (AY-3-8912 tracker) types
+export type NoteName = 'C' | 'C#' | 'D' | 'D#' | 'E' | 'F' | 'F#' | 'G' | 'G#' | 'A' | 'A#' | 'B';
+export const NOTE_OFF = 'OFF';
+export type MusicEffect = 'none' | 'arpeggio' | 'slide_up' | 'slide_down';
+
+export interface MusicCell {
+  note: NoteName | typeof NOTE_OFF | null; // null = no event this row
+  octave: number;                          // 0-7
+  instrument: number | null;               // index into instruments[]
+  volume: number | null;                   // 0-15, null = use instrument default
+  effect: MusicEffect;
+  effectParam: number;
+}
+
+export interface MusicPattern {
+  id: string;
+  name: string;
+  rows: number;
+  cells: MusicCell[][]; // cells[channel][row], 3 channels
+}
+
+export interface MusicInstrument {
+  id: string;
+  name: string;
+  volumeEnvelope: number[]; // 0-15 steps, applied once per tick
+  loopStart: number;        // index to loop back to once envelope ends
+  useToneEnvelope: boolean; // use AY hardware envelope generator instead of fixed volume
+  useNoise: boolean;
+  noisePeriod: number;      // 0-31
+}
+
+export interface MusicProjectData {
+  version: number;
+  type: 'music';
+  patterns: MusicPattern[];
+  instruments: MusicInstrument[];
+  orderList: number[];   // sequence of pattern indices
+  ticksPerRow: number;   // 50Hz ticks per pattern row (tempo)
+}
+
 // Project file
 export interface SoftwareSpriteProjectData {
   version: number;

@@ -11,6 +11,7 @@ const navItems = [
   { href: '/tile_editor', label: 'Tile Editor' },
   { href: '/level_editor', label: 'Level Editor' },
   { href: '/charset_editor', label: 'Charset Editor' },
+  { href: '/music_editor', label: 'Music Editor' },
 ];
 
 const docItems = [
@@ -19,6 +20,7 @@ const docItems = [
   { href: '/player_sprite_examples.html', label: 'ASM Example: Player Sprite' },
   { href: '/scene_examples.html', label: 'ASM Example: Scene' },
   { href: '/charset_examples.html', label: 'ASM Example: Charset' },
+  { href: '/music_examples.html', label: 'ASM Example: Music' },
 ];
 
 export function Navbar() {

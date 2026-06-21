@@ -5,6 +5,10 @@ import {
   MAX_UDG_CHARS,
   CHAR_SIZE,
   DEFAULT_PIXEL_SIZE,
+  NOTE_NAMES,
+  AY_CLOCK_HZ,
+  MUSIC_CHANNELS,
+  noteToPeriod,
 } from '@/constants';
 
 describe('constants', () => {
@@ -77,6 +81,50 @@ describe('constants', () => {
 
     it('should have DEFAULT_PIXEL_SIZE of 10', () => {
       expect(DEFAULT_PIXEL_SIZE).toBe(10);
+    });
+  });
+
+  describe('Music Editor constants', () => {
+    it('should have 12 note names in order starting at C', () => {
+      expect(NOTE_NAMES).toEqual(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']);
+    });
+
+    it('should have 3 channels', () => {
+      expect(MUSIC_CHANNELS).toBe(3);
+    });
+
+    it('should use the real AY-3-8912 128K clock', () => {
+      expect(AY_CLOCK_HZ).toBe(1773400);
+    });
+
+    describe('noteToPeriod', () => {
+      it('should match the known A4=440Hz reference period', () => {
+        // period = round(clock / (16 * freq)) = round(1773400 / (16 * 440))
+        expect(noteToPeriod('A', 4)).toBe(Math.round(1773400 / (16 * 440)));
+      });
+
+      it('should halve the period for one octave up', () => {
+        const a4 = noteToPeriod('A', 4);
+        const a5 = noteToPeriod('A', 5);
+        expect(a5).toBe(Math.round(a4 / 2));
+      });
+
+      it('should double the period for one octave down', () => {
+        const a4 = noteToPeriod('A', 4);
+        const a3 = noteToPeriod('A', 3);
+        expect(a3).toBe(Math.round(a4 * 2));
+      });
+
+      it('should produce strictly decreasing periods across an ascending chromatic scale', () => {
+        const periods = NOTE_NAMES.map((note) => noteToPeriod(note, 4));
+        for (let i = 1; i < periods.length; i++) {
+          expect(periods[i]).toBeLessThan(periods[i - 1]);
+        }
+      });
+
+      it('should never return a period below 1', () => {
+        expect(noteToPeriod('B', 7)).toBeGreaterThanOrEqual(1);
+      });
     });
   });
 });

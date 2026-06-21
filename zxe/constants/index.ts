@@ -75,3 +75,31 @@ export const PRESHIFT_COUNT = 8;
 export const CHARSET_COUNT = 96;           // ASCII 32-127
 export const CHARSET_GRID_COLS = 16;       // characters per row in the overview grid
 export const CHARSET_DEFAULT_PIXEL_SIZE = 20; // display px per ZX pixel in the pixel editor
+
+// Music Editor (AY-3-8912 tracker) constants
+import { NoteName } from '@/types';
+
+export const AY_CLOCK_HZ = 1773400; // AY-3-8912 clock on the ZX Spectrum 128K
+export const MUSIC_CHANNELS = 3;    // A, B, C
+export const MUSIC_CHANNEL_NAMES = ['A', 'B', 'C'] as const;
+export const DEFAULT_PATTERN_ROWS = 32;
+export const MIN_PATTERN_ROWS = 4;
+export const MAX_PATTERN_ROWS = 128;
+export const DEFAULT_TICKS_PER_ROW = 6; // 6 ticks @ 50Hz ≈ 8.3 rows/sec
+export const DEFAULT_OCTAVE = 4;
+export const MIN_OCTAVE = 0;
+export const MAX_OCTAVE = 7;
+export const MAX_VOLUME = 15;
+export const DEFAULT_ENVELOPE_LENGTH = 16;
+export const MAX_INSTRUMENTS = 32;
+
+export const NOTE_NAMES: NoteName[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+// AY tone-generator period for a given note name + octave.
+// Standard tracker convention: octave 4 'A' = 440Hz (concert pitch).
+export function noteToPeriod(note: NoteName, octave: number): number {
+  const noteIndex = NOTE_NAMES.indexOf(note);
+  const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - NOTE_NAMES.indexOf('A'));
+  const freq = 440 * Math.pow(2, semitonesFromA4 / 12);
+  return Math.max(1, Math.round(AY_CLOCK_HZ / (16 * freq)));
+}
