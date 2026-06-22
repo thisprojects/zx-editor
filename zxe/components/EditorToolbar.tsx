@@ -10,6 +10,7 @@ interface EditorToolbarProps {
   infoId?: string;
   infoDescription?: string;
   children?: React.ReactNode;
+  widthClassName?: string;
 }
 
 export function EditorToolbar({
@@ -19,6 +20,7 @@ export function EditorToolbar({
   infoId,
   infoDescription,
   children,
+  widthClassName,
 }: EditorToolbarProps) {
   return (
     <>
@@ -35,7 +37,7 @@ export function EditorToolbar({
 
       {/* Left Toolbar */}
       <div
-        className={`fixed top-10 left-0 h-[calc(100%-40px)] bg-gray-800 shadow-xl z-40 transition-transform duration-300 overflow-y-auto ${
+        className={`fixed top-10 left-0 ${widthClassName ?? ''} h-[calc(100%-40px)] bg-gray-800 shadow-xl z-40 transition-transform duration-300 overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

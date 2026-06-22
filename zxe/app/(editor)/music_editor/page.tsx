@@ -110,6 +110,7 @@ export default function MusicEditorPage() {
         isOpen={toolbarOpen}
         onToggle={() => setToolbarOpen(!toolbarOpen)}
         title="Music Editor"
+        widthClassName="w-[220px]"
         infoId="music-editor-info"
         infoDescription="Compose AY-3-8912 tracker music for the ZX Spectrum 128K across 3 channels. Preview live in your browser, then export as assembly to run on real hardware or in Fuse."
       >

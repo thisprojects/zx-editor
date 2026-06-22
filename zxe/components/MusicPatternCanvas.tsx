@@ -47,11 +47,11 @@ export function MusicPatternCanvas({
   );
 
   return (
-    <div className="font-mono text-sm bg-gray-900 border border-gray-700 rounded overflow-y-auto max-h-[600px]">
+    <div className="font-mono text-sm bg-gray-900 border border-gray-700 rounded overflow-auto max-h-[600px]">
       <table className="w-full border-collapse">
-        <thead className="sticky top-0 bg-gray-800 z-10">
+        <thead className="sticky top-0 bg-gray-800 z-20">
           <tr>
-            <th className="px-2 py-1 text-gray-500 text-xs w-10">Row</th>
+            <th className="sticky left-0 bg-gray-800 z-20 px-2 py-1 text-gray-500 text-xs w-10">Row</th>
             {pattern.cells.map((_, ch) => (
               <th key={ch} className="px-2 py-1 text-gray-300 text-xs border-l border-gray-700">
                 Channel {String.fromCharCode(65 + ch)}
@@ -65,7 +65,13 @@ export function MusicPatternCanvas({
               key={row}
               className={`${row % 4 === 0 ? 'bg-gray-800/40' : ''} ${playingRow === row ? 'bg-blue-900/50' : ''}`}
             >
-              <td className="px-2 text-gray-500 text-xs text-right">{row.toString().padStart(2, '0')}</td>
+              <td
+                className={`sticky left-0 z-10 px-2 text-gray-500 text-xs text-right ${
+                  row % 4 === 0 ? 'bg-gray-800/90' : 'bg-gray-900'
+                } ${playingRow === row ? 'bg-blue-900/90' : ''}`}
+              >
+                {row.toString().padStart(2, '0')}
+              </td>
               {pattern.cells.map((channelCells, ch) => {
                 const cell = channelCells[row];
                 const { note, inst, vol } = formatCell(cell);
