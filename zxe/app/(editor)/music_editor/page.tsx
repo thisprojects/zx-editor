@@ -157,7 +157,7 @@ export default function MusicEditorPage() {
       >
         <div className="p-6 flex flex-col gap-6">
           <div>
-            <div className="text-sm text-gray-400 mb-2">
+            <div className="text-sm text-gray-400 mb-2 text-right">
               {seq.selectedPattern.name} · click a cell, then play notes on your keyboard (Z-M / Q-U)
             </div>
             <MusicPatternCanvas
