@@ -25,11 +25,7 @@ const createDefaultProps = () => ({
   selectedPatternIndex: 0,
   onSelectPattern: jest.fn(),
   onAddPattern: jest.fn(),
-  selectedInstrument: 0,
-  onSelectInstrument: jest.fn(),
   onAddInstrument: jest.fn(),
-  octave: 4,
-  onOctaveChange: jest.fn(),
   ticksPerRow: 6,
   onTicksPerRowChange: jest.fn(),
   onOrderListChange: jest.fn(),
@@ -70,19 +66,12 @@ describe('MusicToolbarContent', () => {
     });
   });
 
-  describe('tempo / octave', () => {
+  describe('tempo', () => {
     it('calls onTicksPerRowChange with the new value', () => {
       const props = createDefaultProps();
       render(<MusicToolbarContent {...props} />);
       fireEvent.change(screen.getByDisplayValue('6'), { target: { value: '10' } });
       expect(props.onTicksPerRowChange).toHaveBeenCalledWith(10);
-    });
-
-    it('calls onOctaveChange with the new value', () => {
-      const props = createDefaultProps();
-      render(<MusicToolbarContent {...props} />);
-      fireEvent.change(screen.getByDisplayValue('4'), { target: { value: '6' } });
-      expect(props.onOctaveChange).toHaveBeenCalledWith(6);
     });
   });
 
@@ -137,17 +126,9 @@ describe('MusicToolbarContent', () => {
   });
 
   describe('instruments', () => {
-    it('lists instruments with index and name', () => {
+    it('shows the instrument count', () => {
       render(<MusicToolbarContent {...createDefaultProps()} />);
-      expect(screen.getByText('0: Lead')).toBeInTheDocument();
-      expect(screen.getByText('1: Bass')).toBeInTheDocument();
-    });
-
-    it('calls onSelectInstrument when the dropdown changes', () => {
-      const props = createDefaultProps();
-      render(<MusicToolbarContent {...props} />);
-      fireEvent.change(screen.getByDisplayValue('0: Lead'), { target: { value: '1' } });
-      expect(props.onSelectInstrument).toHaveBeenCalledWith(1);
+      expect(screen.getByText('Instruments (2)')).toBeInTheDocument();
     });
 
     it('calls onAddInstrument when + Add Instrument is clicked', () => {

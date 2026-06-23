@@ -76,13 +76,36 @@ describe('useMusicSequencer', () => {
       expect(cell.instrument).toBe(0);
     });
 
-    it('should use the current octave when entering a note', () => {
+    it('should use the channel octave when entering a note', () => {
       const { result } = renderHook(() => useMusicSequencer());
 
-      act(() => { result.current.setOctave(6); });
+      act(() => { result.current.setChannelOctave(1, 6); });
       act(() => { result.current.enterNote(1, 0, 'G'); });
 
       expect(result.current.patterns[0].cells[1][0].octave).toBe(6);
+    });
+
+    it('should retune existing notes in a channel when its octave changes', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(2, 0, 'C'); });
+      act(() => { result.current.enterNote(2, 1, 'D'); });
+      act(() => { result.current.enterNoteOff(2, 2); });
+
+      act(() => { result.current.setChannelOctave(2, 6); });
+
+      expect(result.current.patterns[0].cells[2][0].octave).toBe(6);
+      expect(result.current.patterns[0].cells[2][1].octave).toBe(6);
+      expect(result.current.patterns[0].cells[2][2].note).toBe('OFF');
+      expect(result.current.patterns[0].cells[0][0].note).toBeNull();
+    });
+
+    it('should use an explicit octave override when provided', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(1, 0, 'G', 7); });
+
+      expect(result.current.patterns[0].cells[1][0].octave).toBe(7);
     });
 
     it('should enter a note-off', () => {
@@ -112,6 +135,74 @@ describe('useMusicSequencer', () => {
 
       expect(result.current.patterns[0].cells[0][1].note).toBeNull();
       expect(result.current.patterns[0].cells[1][0].note).toBeNull();
+    });
+
+    it('should use a per-channel default instrument, defaulting to 0', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.addInstrument(); });
+      act(() => { result.current.setChannelInstrument(1, 1); });
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.enterNote(1, 0, 'D'); });
+
+      expect(result.current.patterns[0].cells[0][0].instrument).toBe(0);
+      expect(result.current.patterns[0].cells[1][0].instrument).toBe(1);
+    });
+
+    it('should keep per-channel instrument selection independent of other channels', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.addInstrument(); });
+      act(() => { result.current.setChannelInstrument(2, 1); });
+
+      expect(result.current.channelInstrument).toEqual([0, 0, 1]);
+    });
+
+    it('should clamp setChannelOctave to the valid octave range', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.setChannelOctave(0, 99); });
+      expect(result.current.channelOctave[0]).toBe(7);
+
+      act(() => { result.current.setChannelOctave(0, -10); });
+      expect(result.current.channelOctave[0]).toBe(0);
+    });
+
+    it('should only retune the target channel, leaving other channels untouched', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.enterNote(1, 0, 'D'); });
+
+      act(() => { result.current.setChannelOctave(0, 6); });
+
+      expect(result.current.patterns[0].cells[0][0].octave).toBe(6);
+      expect(result.current.patterns[0].cells[1][0].octave).toBe(4);
+    });
+
+    it('should retune notes in that channel across every pattern', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.addPattern(); });
+      act(() => { result.current.setSelectedPatternIndex(1); });
+      act(() => { result.current.enterNote(0, 0, 'E'); });
+
+      act(() => { result.current.setChannelOctave(0, 2); });
+
+      expect(result.current.patterns[0].cells[0][0].octave).toBe(2);
+      expect(result.current.patterns[1].cells[0][0].octave).toBe(2);
+    });
+
+    it('should track which instrument is being edited, independent of channel assignment', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.addInstrument(); });
+      expect(result.current.editingInstrumentIndex).toBe(0);
+
+      act(() => { result.current.setEditingInstrumentIndex(1); });
+      expect(result.current.editingInstrumentIndex).toBe(1);
+      expect(result.current.channelInstrument).toEqual([0, 0, 0]);
     });
 
     it('should push history so the change can be undone', () => {

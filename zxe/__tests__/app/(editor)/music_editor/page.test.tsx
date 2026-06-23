@@ -33,14 +33,16 @@ const mockSequencer = {
   selectedPattern: makePattern(),
   selectedPatternIndex: 0,
   setSelectedPatternIndex: jest.fn(),
-  selectedInstrument: 0,
-  setSelectedInstrument: jest.fn(),
+  editingInstrumentIndex: 0,
+  setEditingInstrumentIndex: jest.fn(),
+  channelInstrument: [0, 0, 0],
+  setChannelInstrument: jest.fn(),
+  channelOctave: [4, 4, 4],
+  setChannelOctave: jest.fn(),
   cursorRow: 0,
   setCursorRow: jest.fn(),
   cursorChannel: 0,
   setCursorChannel: jest.fn(),
-  octave: 4,
-  setOctave: jest.fn(),
   isPlaying: false,
   playingRow: null as number | null,
   orderIndex: 0,
@@ -90,7 +92,7 @@ describe('Music Editor page', () => {
     localStorage.setItem('musicEditor_hideInstructions', 'true');
     mockSequencer.cursorRow = 0;
     mockSequencer.cursorChannel = 0;
-    mockSequencer.octave = 4;
+    mockSequencer.channelOctave = [4, 4, 4];
     mockSequencer.selectedPattern = makePattern();
   });
 
@@ -111,7 +113,7 @@ describe('Music Editor page', () => {
 
     it('renders the selected instrument editor', () => {
       render(<MusicEditorPage />);
-      expect(screen.getByText('Instrument 0: Lead')).toBeInTheDocument();
+      expect(screen.getByText('Edit instrument:')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Lead')).toBeInTheDocument();
     });
 
@@ -121,6 +123,29 @@ describe('Music Editor page', () => {
       render(<MusicEditorPage />);
       expect(screen.queryByDisplayValue('Lead')).not.toBeInTheDocument();
       mockSequencer.instruments = original;
+    });
+
+    it('switches the edited instrument via the "Edit instrument" dropdown', () => {
+      render(<MusicEditorPage />);
+      const editLabel = screen.getByText('Edit instrument:');
+      const editSelect = editLabel.parentElement!.querySelector('select')!;
+      fireEvent.change(editSelect, { target: { value: '0' } });
+      expect(mockSequencer.setEditingInstrumentIndex).toHaveBeenCalledWith(0);
+    });
+
+    it('does not render a global instrument or octave selector in the toolbar', () => {
+      render(<MusicEditorPage />);
+      expect(screen.queryByText('Instrument')).not.toBeInTheDocument();
+      expect(screen.queryByText('Octave')).not.toBeInTheDocument();
+      expect(screen.getByText('Instruments (1)')).toBeInTheDocument();
+    });
+
+    it('passes per-channel instrument and octave state down to the pattern canvas', () => {
+      mockSequencer.channelInstrument = [0, 0, 0];
+      mockSequencer.channelOctave = [4, 4, 4];
+      render(<MusicEditorPage />);
+      expect(screen.getAllByDisplayValue('0: Lead')).toHaveLength(4); // 3 channel headers + edit-instrument dropdown
+      expect(screen.getAllByDisplayValue('4')).toHaveLength(3);
     });
   });
 
@@ -224,13 +249,26 @@ describe('Music Editor page', () => {
       expect(mockSequencer.setCursorRow).toHaveBeenCalledWith(1);
     });
 
-    it('an upper-octave note key bumps the octave for the entry and restores it', () => {
-      mockSequencer.octave = 4;
+    it('an upper-octave note key enters the note one octave above the channel default', () => {
+      mockSequencer.channelOctave = [4, 4, 4];
       render(<MusicEditorPage />);
       fireEvent.keyDown(keyArea(), { key: 'q' });
-      expect(mockSequencer.setOctave).toHaveBeenNthCalledWith(1, 5);
-      expect(mockSequencer.enterNote).toHaveBeenCalledWith(0, 0, 'C');
-      expect(mockSequencer.setOctave).toHaveBeenNthCalledWith(2, 4);
+      expect(mockSequencer.enterNote).toHaveBeenCalledWith(0, 0, 'C', 5);
+    });
+
+    it('an upper-octave note key uses the cursor channel, not channel 0', () => {
+      mockSequencer.cursorChannel = 2;
+      mockSequencer.channelOctave = [4, 4, 6];
+      render(<MusicEditorPage />);
+      fireEvent.keyDown(keyArea(), { key: 'q' });
+      expect(mockSequencer.enterNote).toHaveBeenCalledWith(2, 0, 'C', 7);
+    });
+
+    it('caps the upper-octave bump at octave 7', () => {
+      mockSequencer.channelOctave = [7, 4, 4];
+      render(<MusicEditorPage />);
+      fireEvent.keyDown(keyArea(), { key: 'q' });
+      expect(mockSequencer.enterNote).toHaveBeenCalledWith(0, 0, 'C', 7);
     });
 
     it('ignores unmapped keys', () => {

@@ -6,6 +6,8 @@ import {
   DEFAULT_PATTERN_ROWS,
   DEFAULT_TICKS_PER_ROW,
   DEFAULT_OCTAVE,
+  MIN_OCTAVE,
+  MAX_OCTAVE,
   DEFAULT_ENVELOPE_LENGTH,
   noteToPeriod,
 } from '@/constants';
@@ -54,10 +56,11 @@ export function useMusicSequencer() {
     useHistory<MusicState>(initialState());
 
   const [selectedPatternIndex, setSelectedPatternIndex] = useState(0);
-  const [selectedInstrument, setSelectedInstrument] = useState(0);
+  const [editingInstrumentIndex, setEditingInstrumentIndex] = useState(0);
+  const [channelInstrument, setChannelInstrumentState] = useState<number[]>(Array(MUSIC_CHANNELS).fill(0));
+  const [channelOctave, setChannelOctaveState] = useState<number[]>(Array(MUSIC_CHANNELS).fill(DEFAULT_OCTAVE));
   const [cursorRow, setCursorRow] = useState(0);
   const [cursorChannel, setCursorChannel] = useState(0);
-  const [octave, setOctave] = useState(DEFAULT_OCTAVE);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingRow, setPlayingRow] = useState<number | null>(null);
   const [orderIndex, setOrderIndex] = useState(0);
@@ -96,10 +99,37 @@ export function useMusicSequencer() {
   );
 
   const enterNote = useCallback(
-    (channel: number, row: number, note: NoteName) => {
-      setCell(channel, row, { note, octave, instrument: selectedInstrument, volume: null });
+    (channel: number, row: number, note: NoteName, octaveOverride?: number) => {
+      const octave = octaveOverride ?? channelOctave[channel] ?? DEFAULT_OCTAVE;
+      setCell(channel, row, { note, octave, instrument: channelInstrument[channel] ?? 0, volume: null });
     },
-    [setCell, octave, selectedInstrument]
+    [setCell, channelOctave, channelInstrument]
+  );
+
+  const setChannelInstrument = useCallback((channel: number, instrumentIndex: number) => {
+    setChannelInstrumentState((prev) => prev.map((v, i) => (i === channel ? instrumentIndex : v)));
+  }, []);
+
+  const setChannelOctave = useCallback(
+    (channel: number, octaveValue: number) => {
+      const clamped = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE, octaveValue));
+      setChannelOctaveState((prev) => prev.map((v, i) => (i === channel ? clamped : v)));
+
+      pushHistory();
+      setState((prev) => ({
+        ...prev,
+        patterns: prev.patterns.map((p) => ({
+          ...p,
+          cells: p.cells.map((chCells, ci) => {
+            if (ci !== channel) return chCells;
+            return chCells.map((cell) =>
+              cell.note != null && cell.note !== NOTE_OFF ? { ...cell, octave: clamped } : cell
+            );
+          }),
+        })),
+      }));
+    },
+    [pushHistory, setState]
   );
 
   const enterNoteOff = useCallback(
@@ -287,14 +317,16 @@ export function useMusicSequencer() {
     selectedPattern,
     selectedPatternIndex,
     setSelectedPatternIndex,
-    selectedInstrument,
-    setSelectedInstrument,
+    editingInstrumentIndex,
+    setEditingInstrumentIndex,
+    channelInstrument,
+    setChannelInstrument,
+    channelOctave,
+    setChannelOctave,
     cursorRow,
     setCursorRow,
     cursorChannel,
     setCursorChannel,
-    octave,
-    setOctave,
     isPlaying,
     playingRow,
     orderIndex,

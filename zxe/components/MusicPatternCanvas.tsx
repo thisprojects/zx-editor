@@ -1,15 +1,21 @@
 'use client';
 
 import { useCallback } from 'react';
-import { MusicCell, MusicPattern, NoteName, NOTE_OFF } from '@/types';
+import { MusicCell, MusicInstrument, MusicPattern, NoteName, NOTE_OFF } from '@/types';
+import { MIN_OCTAVE, MAX_OCTAVE } from '@/constants';
 
 interface MusicPatternCanvasProps {
   pattern: MusicPattern;
+  instruments: MusicInstrument[];
+  channelInstrument: number[];
+  onChannelInstrumentChange: (channel: number, instrumentIndex: number) => void;
+  channelOctave: number[];
+  onChannelOctaveChange: (channel: number, octave: number) => void;
   cursorRow: number;
   cursorChannel: number;
   playingRow: number | null;
   onSetCursor: (channel: number, row: number) => void;
-  onEnterNote: (channel: number, row: number, note: NoteName) => void;
+  onEnterNote: (channel: number, row: number, note: NoteName, octaveOverride?: number) => void;
   onEnterNoteOff: (channel: number, row: number) => void;
   onClearCell: (channel: number, row: number) => void;
 }
@@ -35,6 +41,11 @@ function formatCell(cell: MusicCell): { note: string; inst: string; vol: string 
 
 export function MusicPatternCanvas({
   pattern,
+  instruments,
+  channelInstrument,
+  onChannelInstrumentChange,
+  channelOctave,
+  onChannelOctaveChange,
   cursorRow,
   cursorChannel,
   playingRow,
@@ -53,8 +64,36 @@ export function MusicPatternCanvas({
           <tr>
             <th className="sticky left-0 bg-gray-800 z-20 px-2 py-1 text-gray-500 text-xs w-10">Row</th>
             {pattern.cells.map((_, ch) => (
-              <th key={ch} className="px-2 py-1 text-gray-300 text-xs border-l border-gray-700">
-                Channel {String.fromCharCode(65 + ch)}
+              <th key={ch} className="px-1.5 py-1 text-gray-300 text-xs border-l border-gray-700 font-normal">
+                <div className="mb-1 text-center">Channel {String.fromCharCode(65 + ch)}</div>
+                <div className="flex gap-1">
+                  <label className="flex-[2] flex items-center gap-0.5">
+                    <span className="text-[9px] text-gray-500 shrink-0">Ins</span>
+                    <select
+                      value={channelInstrument[ch] ?? 0}
+                      onChange={(e) => onChannelInstrumentChange(ch, Number(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full bg-gray-700 text-white text-[10px] rounded px-0.5 py-0.5 font-mono leading-none"
+                    >
+                      {instruments.map((inst, i) => (
+                        <option key={inst.id} value={i}>{i}: {inst.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex-1 flex items-center gap-0.5">
+                    <span className="text-[9px] text-gray-500 shrink-0">Oct</span>
+                    <select
+                      value={channelOctave[ch] ?? 0}
+                      onChange={(e) => onChannelOctaveChange(ch, Number(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full bg-gray-700 text-white text-[10px] rounded px-0.5 py-0.5 font-mono leading-none"
+                    >
+                      {Array.from({ length: MAX_OCTAVE - MIN_OCTAVE + 1 }, (_, i) => MIN_OCTAVE + i).map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </th>
             ))}
           </tr>

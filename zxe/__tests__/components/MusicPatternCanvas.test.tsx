@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MusicPatternCanvas, KEY_TO_NOTE_BASE, KEY_TO_NOTE_UP } from '@/components/MusicPatternCanvas';
-import { MusicCell, MusicPattern } from '@/types';
+import { MusicCell, MusicInstrument, MusicPattern } from '@/types';
 
 function makeCell(overrides: Partial<MusicCell> = {}): MusicCell {
   return { note: null, octave: 4, instrument: null, volume: null, effect: 'none', effectParam: 0, ...overrides };
@@ -15,8 +15,25 @@ function makePattern(rows = 4): MusicPattern {
   };
 }
 
+function makeInstrument(id: string, name: string): MusicInstrument {
+  return {
+    id,
+    name,
+    volumeEnvelope: Array(16).fill(15),
+    loopStart: 15,
+    useToneEnvelope: false,
+    useNoise: false,
+    noisePeriod: 8,
+  };
+}
+
 const createDefaultProps = () => ({
   pattern: makePattern(),
+  instruments: [makeInstrument('i0', 'Lead'), makeInstrument('i1', 'Bass')],
+  channelInstrument: [0, 0, 0],
+  onChannelInstrumentChange: jest.fn(),
+  channelOctave: [4, 4, 4],
+  onChannelOctaveChange: jest.fn(),
   cursorRow: 0,
   cursorChannel: 0,
   playingRow: null as number | null,
@@ -121,6 +138,80 @@ describe('MusicPatternCanvas', () => {
     render(<MusicPatternCanvas {...createDefaultProps()} />);
     const rows = screen.getAllByRole('row');
     rows.slice(1).forEach((row) => expect(row).not.toHaveClass('bg-blue-900/50'));
+  });
+
+  describe('per-channel instrument selector', () => {
+    it('renders an instrument dropdown for each channel, defaulting to instrument 0', () => {
+      render(<MusicPatternCanvas {...createDefaultProps()} />);
+      const selects = screen.getAllByDisplayValue('0: Lead');
+      expect(selects).toHaveLength(3);
+    });
+
+    it('calls onChannelInstrumentChange with the channel and new instrument index', () => {
+      const props = createDefaultProps();
+      render(<MusicPatternCanvas {...props} />);
+
+      const selects = screen.getAllByDisplayValue('0: Lead');
+      fireEvent.change(selects[1], { target: { value: '1' } });
+
+      expect(props.onChannelInstrumentChange).toHaveBeenCalledWith(1, 1);
+    });
+
+    it('reflects a different instrument per channel independently', () => {
+      const props = createDefaultProps();
+      props.channelInstrument = [0, 1, 0];
+      render(<MusicPatternCanvas {...props} />);
+
+      expect(screen.getAllByDisplayValue('0: Lead')).toHaveLength(2);
+      expect(screen.getAllByDisplayValue('1: Bass')).toHaveLength(1);
+    });
+
+    it('does not let clicking the dropdown move the cursor', () => {
+      const props = createDefaultProps();
+      render(<MusicPatternCanvas {...props} />);
+
+      const selects = screen.getAllByDisplayValue('0: Lead');
+      fireEvent.click(selects[0]);
+
+      expect(props.onSetCursor).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('per-channel octave selector', () => {
+    it('renders an octave dropdown for each channel, defaulting to 4', () => {
+      render(<MusicPatternCanvas {...createDefaultProps()} />);
+      const selects = screen.getAllByDisplayValue('4');
+      expect(selects).toHaveLength(3);
+    });
+
+    it('calls onChannelOctaveChange with the channel and new octave', () => {
+      const props = createDefaultProps();
+      render(<MusicPatternCanvas {...props} />);
+
+      const selects = screen.getAllByDisplayValue('4');
+      fireEvent.change(selects[2], { target: { value: '6' } });
+
+      expect(props.onChannelOctaveChange).toHaveBeenCalledWith(2, 6);
+    });
+
+    it('reflects a different octave per channel independently', () => {
+      const props = createDefaultProps();
+      props.channelOctave = [3, 4, 7];
+      render(<MusicPatternCanvas {...props} />);
+
+      expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('7')).toBeInTheDocument();
+    });
+
+    it('does not let clicking the dropdown move the cursor', () => {
+      const props = createDefaultProps();
+      render(<MusicPatternCanvas {...props} />);
+
+      const selects = screen.getAllByDisplayValue('4');
+      fireEvent.click(selects[0]);
+
+      expect(props.onSetCursor).not.toHaveBeenCalled();
+    });
   });
 
   describe('keyboard note maps', () => {

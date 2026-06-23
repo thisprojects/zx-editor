@@ -3,7 +3,6 @@
 import { MusicInstrument, MusicPattern } from '@/types';
 import { IoPlay, IoStop } from 'react-icons/io5';
 import { UndoRedoButtons } from './UndoRedoButtons';
-import { MIN_OCTAVE, MAX_OCTAVE } from '@/constants';
 
 interface MusicToolbarContentProps {
   patterns: MusicPattern[];
@@ -12,11 +11,7 @@ interface MusicToolbarContentProps {
   selectedPatternIndex: number;
   onSelectPattern: (index: number) => void;
   onAddPattern: () => void;
-  selectedInstrument: number;
-  onSelectInstrument: (index: number) => void;
   onAddInstrument: () => void;
-  octave: number;
-  onOctaveChange: (octave: number) => void;
   ticksPerRow: number;
   onTicksPerRowChange: (ticks: number) => void;
   onOrderListChange: (orderList: number[]) => void;
@@ -40,11 +35,7 @@ export function MusicToolbarContent({
   selectedPatternIndex,
   onSelectPattern,
   onAddPattern,
-  selectedInstrument,
-  onSelectInstrument,
   onAddInstrument,
-  octave,
-  onOctaveChange,
   ticksPerRow,
   onTicksPerRowChange,
   onOrderListChange,
@@ -84,17 +75,6 @@ export function MusicToolbarContent({
             max={31}
             value={ticksPerRow}
             onChange={(e) => onTicksPerRowChange(Number(e.target.value))}
-            className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 mt-1"
-          />
-        </div>
-        <div className="mt-2">
-          <div className="text-xs text-gray-400">Octave</div>
-          <input
-            type="number"
-            min={MIN_OCTAVE}
-            max={MAX_OCTAVE}
-            value={octave}
-            onChange={(e) => onOctaveChange(Number(e.target.value))}
             className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 mt-1"
           />
         </div>
@@ -141,16 +121,7 @@ export function MusicToolbarContent({
 
       {/* Instruments */}
       <div className="border border-gray-600 rounded p-2">
-        <div className="text-xs text-gray-400 mb-1">Instrument</div>
-        <select
-          value={selectedInstrument}
-          onChange={(e) => onSelectInstrument(Number(e.target.value))}
-          className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1"
-        >
-          {instruments.map((inst, i) => (
-            <option key={inst.id} value={i}>{i}: {inst.name}</option>
-          ))}
-        </select>
+        <div className="text-xs text-gray-400 mb-1">Instruments ({instruments.length})</div>
         <button
           onClick={onAddInstrument}
           className="w-full mt-1 px-2 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 text-xs"

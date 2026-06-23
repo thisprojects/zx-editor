@@ -79,10 +79,8 @@ export default function MusicEditorPage() {
         seq.setCursorRow(Math.min(seq.selectedPattern.rows - 1, seq.cursorRow + 1));
       } else if (KEY_TO_NOTE_UP[key]) {
         e.preventDefault();
-        const prevOctave = seq.octave;
-        seq.setOctave(Math.min(7, prevOctave + 1));
-        seq.enterNote(seq.cursorChannel, seq.cursorRow, KEY_TO_NOTE_UP[key]);
-        seq.setOctave(prevOctave);
+        const upOctave = Math.min(7, (seq.channelOctave[seq.cursorChannel] ?? 4) + 1);
+        seq.enterNote(seq.cursorChannel, seq.cursorRow, KEY_TO_NOTE_UP[key], upOctave);
         seq.setCursorRow(Math.min(seq.selectedPattern.rows - 1, seq.cursorRow + 1));
       }
     },
@@ -121,11 +119,7 @@ export default function MusicEditorPage() {
           selectedPatternIndex={seq.selectedPatternIndex}
           onSelectPattern={seq.setSelectedPatternIndex}
           onAddPattern={seq.addPattern}
-          selectedInstrument={seq.selectedInstrument}
-          onSelectInstrument={seq.setSelectedInstrument}
           onAddInstrument={seq.addInstrument}
-          octave={seq.octave}
-          onOctaveChange={seq.setOctave}
           ticksPerRow={seq.ticksPerRow}
           onTicksPerRowChange={seq.setTicksPerRow}
           onOrderListChange={seq.setOrderList}
@@ -163,6 +157,11 @@ export default function MusicEditorPage() {
             </div>
             <MusicPatternCanvas
               pattern={seq.selectedPattern}
+              instruments={seq.instruments}
+              channelInstrument={seq.channelInstrument}
+              onChannelInstrumentChange={seq.setChannelInstrument}
+              channelOctave={seq.channelOctave}
+              onChannelOctaveChange={seq.setChannelOctave}
               cursorRow={seq.cursorRow}
               cursorChannel={seq.cursorChannel}
               playingRow={seq.isPlaying ? seq.playingRow : null}
@@ -174,14 +173,23 @@ export default function MusicEditorPage() {
           </div>
 
           <div>
-            <div className="text-sm text-gray-400 mb-2">
-              Instrument {seq.selectedInstrument}: {seq.instruments[seq.selectedInstrument]?.name}
+            <div className="text-sm text-gray-400 mb-2 flex items-center gap-2">
+              <span>Edit instrument:</span>
+              <select
+                value={seq.editingInstrumentIndex}
+                onChange={(e) => seq.setEditingInstrumentIndex(Number(e.target.value))}
+                className="bg-gray-700 text-white text-xs rounded px-2 py-1"
+              >
+                {seq.instruments.map((inst, i) => (
+                  <option key={inst.id} value={i}>{i}: {inst.name}</option>
+                ))}
+              </select>
             </div>
-            {seq.instruments[seq.selectedInstrument] && (
+            {seq.instruments[seq.editingInstrumentIndex] && (
               <MusicInstrumentEditor
-                instrument={seq.instruments[seq.selectedInstrument]}
-                onSetStep={(step, level) => seq.setEnvelopeStep(seq.selectedInstrument, step, level)}
-                onUpdate={(update) => seq.updateInstrument(seq.selectedInstrument, update)}
+                instrument={seq.instruments[seq.editingInstrumentIndex]}
+                onSetStep={(step, level) => seq.setEnvelopeStep(seq.editingInstrumentIndex, step, level)}
+                onUpdate={(update) => seq.updateInstrument(seq.editingInstrumentIndex, update)}
               />
             )}
           </div>
