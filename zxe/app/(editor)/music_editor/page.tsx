@@ -7,7 +7,7 @@ import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { MusicToolbarContent } from '@/components/MusicToolbarContent';
 import { MusicPatternCanvas, KEY_TO_NOTE_BASE, KEY_TO_NOTE_UP } from '@/components/MusicPatternCanvas';
-import { MusicInstrumentEditor } from '@/components/MusicInstrumentEditor';
+import { ManageInstrumentsModal } from '@/components/ManageInstrumentsModal';
 import { MusicInstructionsModal, shouldShowMusicInstructions } from '@/components/MusicInstructionsModal';
 import { FileNameModal } from '@/components/FileNameModal';
 import { MUSIC_CHANNELS } from '@/constants';
@@ -18,6 +18,7 @@ export default function MusicEditorPage() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalAction, setModalAction] = useState<'save' | 'export' | null>(null);
+  const [showInstrumentManager, setShowInstrumentManager] = useState(false);
 
   useEffect(() => {
     setShowInstructions(shouldShowMusicInstructions());
@@ -119,7 +120,7 @@ export default function MusicEditorPage() {
           selectedPatternIndex={seq.selectedPatternIndex}
           onSelectPattern={seq.setSelectedPatternIndex}
           onAddPattern={seq.addPattern}
-          onAddInstrument={seq.addInstrument}
+          onManageInstruments={() => setShowInstrumentManager(true)}
           ticksPerRow={seq.ticksPerRow}
           onTicksPerRowChange={seq.setTicksPerRow}
           onOrderListChange={seq.setOrderList}
@@ -172,27 +173,6 @@ export default function MusicEditorPage() {
             />
           </div>
 
-          <div>
-            <div className="text-sm text-gray-400 mb-2 flex items-center gap-2">
-              <span>Edit instrument:</span>
-              <select
-                value={seq.editingInstrumentIndex}
-                onChange={(e) => seq.setEditingInstrumentIndex(Number(e.target.value))}
-                className="bg-gray-700 text-white text-xs rounded px-2 py-1"
-              >
-                {seq.instruments.map((inst, i) => (
-                  <option key={inst.id} value={i}>{i}: {inst.name}</option>
-                ))}
-              </select>
-            </div>
-            {seq.instruments[seq.editingInstrumentIndex] && (
-              <MusicInstrumentEditor
-                instrument={seq.instruments[seq.editingInstrumentIndex]}
-                onSetStep={(step, level) => seq.setEnvelopeStep(seq.editingInstrumentIndex, step, level)}
-                onUpdate={(update) => seq.updateInstrument(seq.editingInstrumentIndex, update)}
-              />
-            )}
-          </div>
         </div>
       </div>
 
@@ -207,6 +187,18 @@ export default function MusicEditorPage() {
           href: '/music_examples.html',
           description: 'the Music ASM example shows how to assemble and run an exported track with pasmo and fuse.',
         }}
+      />
+
+      <ManageInstrumentsModal
+        isOpen={showInstrumentManager}
+        onClose={() => setShowInstrumentManager(false)}
+        instruments={seq.instruments}
+        editingInstrumentIndex={seq.editingInstrumentIndex}
+        onSetEditingIndex={seq.setEditingInstrumentIndex}
+        onAddInstrument={seq.addInstrument}
+        onRemoveInstrument={seq.removeInstrument}
+        onSetStep={(instrumentIndex, step, level) => seq.setEnvelopeStep(instrumentIndex, step, level)}
+        onUpdate={(instrumentIndex, update) => seq.updateInstrument(instrumentIndex, update)}
       />
 
       <MusicInstructionsModal

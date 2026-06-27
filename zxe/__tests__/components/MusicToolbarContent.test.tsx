@@ -25,7 +25,7 @@ const createDefaultProps = () => ({
   selectedPatternIndex: 0,
   onSelectPattern: jest.fn(),
   onAddPattern: jest.fn(),
-  onAddInstrument: jest.fn(),
+  onManageInstruments: jest.fn(),
   ticksPerRow: 6,
   onTicksPerRowChange: jest.fn(),
   onOrderListChange: jest.fn(),
@@ -131,11 +131,11 @@ describe('MusicToolbarContent', () => {
       expect(screen.getByText('Instruments (2)')).toBeInTheDocument();
     });
 
-    it('calls onAddInstrument when + Add Instrument is clicked', () => {
+    it('calls onManageInstruments when Manage Instruments is clicked', () => {
       const props = createDefaultProps();
       render(<MusicToolbarContent {...props} />);
-      fireEvent.click(screen.getByText('+ Add Instrument'));
-      expect(props.onAddInstrument).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByText('Manage Instruments'));
+      expect(props.onManageInstruments).toHaveBeenCalledTimes(1);
     });
   });
 

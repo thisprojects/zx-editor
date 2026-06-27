@@ -54,6 +54,7 @@ const mockSequencer = {
   enterNoteOff: jest.fn(),
   addPattern: jest.fn(),
   addInstrument: jest.fn(),
+  removeInstrument: jest.fn(),
   updateInstrument: jest.fn(),
   setEnvelopeStep: jest.fn(),
   setOrderList: jest.fn(),
@@ -111,26 +112,27 @@ describe('Music Editor page', () => {
       expect(screen.getByText(/click a cell/)).toBeInTheDocument();
     });
 
-    it('renders the selected instrument editor', () => {
+    it('does not render an inline instrument editor below the tracker', () => {
       render(<MusicEditorPage />);
-      expect(screen.getByText('Edit instrument:')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Lead')).toBeInTheDocument();
+      expect(screen.queryByText('Edit instrument:')).not.toBeInTheDocument();
     });
 
-    it('does not render the instrument editor when no instrument is selected', () => {
-      const original = mockSequencer.instruments;
-      mockSequencer.instruments = [];
+    it('renders a Manage Instruments button in the toolbar', () => {
       render(<MusicEditorPage />);
-      expect(screen.queryByDisplayValue('Lead')).not.toBeInTheDocument();
-      mockSequencer.instruments = original;
+      expect(screen.getByText('Manage Instruments')).toBeInTheDocument();
     });
 
-    it('switches the edited instrument via the "Edit instrument" dropdown', () => {
+    it('opens the ManageInstrumentsModal when Manage Instruments is clicked', () => {
       render(<MusicEditorPage />);
-      const editLabel = screen.getByText('Edit instrument:');
-      const editSelect = editLabel.parentElement!.querySelector('select')!;
-      fireEvent.change(editSelect, { target: { value: '0' } });
-      expect(mockSequencer.setEditingInstrumentIndex).toHaveBeenCalledWith(0);
+      fireEvent.click(screen.getByText('Manage Instruments'));
+      expect(screen.getByRole('heading', { name: 'Manage Instruments' })).toBeInTheDocument();
+    });
+
+    it('closes the ManageInstrumentsModal when × is clicked', () => {
+      render(<MusicEditorPage />);
+      fireEvent.click(screen.getByText('Manage Instruments'));
+      fireEvent.click(screen.getByText('×'));
+      expect(screen.queryByRole('heading', { name: 'Manage Instruments' })).not.toBeInTheDocument();
     });
 
     it('does not render a global instrument or octave selector in the toolbar', () => {
@@ -144,7 +146,7 @@ describe('Music Editor page', () => {
       mockSequencer.channelInstrument = [0, 0, 0];
       mockSequencer.channelOctave = [4, 4, 4];
       render(<MusicEditorPage />);
-      expect(screen.getAllByDisplayValue('0: Lead')).toHaveLength(4); // 3 channel headers + edit-instrument dropdown
+      expect(screen.getAllByDisplayValue('0: Lead')).toHaveLength(3); // 3 channel headers only
       expect(screen.getAllByDisplayValue('4')).toHaveLength(3);
     });
   });

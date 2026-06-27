@@ -12,6 +12,7 @@ import {
   noteToPeriod,
 } from '@/constants';
 import { AYEmulator, buildMixer } from '@/utils/ayEmulator';
+import { PRESET_INSTRUMENTS } from '@/constants/presetInstruments';
 
 interface MusicState {
   patterns: MusicPattern[];
@@ -47,8 +48,11 @@ function createInstrument(id: string, name: string): MusicInstrument {
 
 function initialState(): MusicState {
   const pattern = createPattern('p0', 'Pattern 0');
-  const instrument = createInstrument('i0', 'Instrument 0');
-  return { patterns: [pattern], instruments: [instrument], orderList: [0], ticksPerRow: DEFAULT_TICKS_PER_ROW };
+  const instruments: MusicInstrument[] = PRESET_INSTRUMENTS.map((preset, i) => ({
+    id: `i${i}`,
+    ...preset,
+  }));
+  return { patterns: [pattern], instruments, orderList: [0], ticksPerRow: DEFAULT_TICKS_PER_ROW };
 }
 
 export function useMusicSequencer() {
@@ -108,7 +112,23 @@ export function useMusicSequencer() {
 
   const setChannelInstrument = useCallback((channel: number, instrumentIndex: number) => {
     setChannelInstrumentState((prev) => prev.map((v, i) => (i === channel ? instrumentIndex : v)));
-  }, []);
+    pushHistory();
+    setState((prev) => {
+      const pattern = prev.patterns[selectedPatternIndex];
+      if (!pattern) return prev;
+      const updatedCells = pattern.cells.map((channelCells, ch) => {
+        if (ch !== channel) return channelCells;
+        return channelCells.map((cell) =>
+          cell.note !== null ? { ...cell, instrument: instrumentIndex } : cell
+        );
+      });
+      const updatedPattern = { ...pattern, cells: updatedCells };
+      return {
+        ...prev,
+        patterns: prev.patterns.map((p, i) => (i === selectedPatternIndex ? updatedPattern : p)),
+      };
+    });
+  }, [pushHistory, setState, selectedPatternIndex]);
 
   const setChannelOctave = useCallback(
     (channel: number, octaveValue: number) => {
@@ -154,6 +174,19 @@ export function useMusicSequencer() {
       return { ...prev, instruments: [...prev.instruments, instrument] };
     });
   }, [pushHistory, setState]);
+
+  const removeInstrument = useCallback(
+    (index: number) => {
+      pushHistory();
+      setState((prev) => {
+        if (prev.instruments.length <= 1) return prev;
+        const instruments = prev.instruments.filter((_, i) => i !== index);
+        return { ...prev, instruments };
+      });
+      setEditingInstrumentIndex((prev) => Math.max(0, prev >= index ? prev - 1 : prev));
+    },
+    [pushHistory, setState]
+  );
 
   const updateInstrument = useCallback(
     (index: number, update: Partial<MusicInstrument>) => {
@@ -338,6 +371,7 @@ export function useMusicSequencer() {
     enterNoteOff,
     addPattern,
     addInstrument,
+    removeInstrument,
     updateInstrument,
     setEnvelopeStep,
     setOrderList,

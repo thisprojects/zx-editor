@@ -11,7 +11,7 @@ interface MusicToolbarContentProps {
   selectedPatternIndex: number;
   onSelectPattern: (index: number) => void;
   onAddPattern: () => void;
-  onAddInstrument: () => void;
+  onManageInstruments: () => void;
   ticksPerRow: number;
   onTicksPerRowChange: (ticks: number) => void;
   onOrderListChange: (orderList: number[]) => void;
@@ -35,7 +35,7 @@ export function MusicToolbarContent({
   selectedPatternIndex,
   onSelectPattern,
   onAddPattern,
-  onAddInstrument,
+  onManageInstruments,
   ticksPerRow,
   onTicksPerRowChange,
   onOrderListChange,
@@ -123,10 +123,10 @@ export function MusicToolbarContent({
       <div className="border border-gray-600 rounded p-2">
         <div className="text-xs text-gray-400 mb-1">Instruments ({instruments.length})</div>
         <button
-          onClick={onAddInstrument}
-          className="w-full mt-1 px-2 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 text-xs"
+          onClick={onManageInstruments}
+          className="w-full mt-1 px-2 py-1 rounded bg-blue-700 text-white hover:bg-blue-600 text-xs"
         >
-          + Add Instrument
+          Manage Instruments
         </button>
       </div>
 

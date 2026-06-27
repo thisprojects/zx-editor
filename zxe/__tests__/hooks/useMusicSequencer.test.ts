@@ -40,10 +40,12 @@ describe('useMusicSequencer', () => {
       expect(result.current.patterns[0].cells).toHaveLength(MUSIC_CHANNELS);
     });
 
-    it('should start with a single default instrument', () => {
+    it('should start with all preset instruments loaded', () => {
       const { result } = renderHook(() => useMusicSequencer());
-      expect(result.current.instruments).toHaveLength(1);
-      expect(result.current.instruments[0].volumeEnvelope).toHaveLength(16);
+      expect(result.current.instruments.length).toBeGreaterThan(1);
+      result.current.instruments.forEach((inst) => {
+        expect(inst.volumeEnvelope).toHaveLength(16);
+      });
     });
 
     it('should start with order list [0] and default tempo', () => {
@@ -231,11 +233,134 @@ describe('useMusicSequencer', () => {
 
     it('should append a new instrument', () => {
       const { result } = renderHook(() => useMusicSequencer());
+      const initialCount = result.current.instruments.length;
 
       act(() => { result.current.addInstrument(); });
 
-      expect(result.current.instruments).toHaveLength(2);
-      expect(result.current.instruments[1].name).toBe('Instrument 1');
+      expect(result.current.instruments).toHaveLength(initialCount + 1);
+    });
+  });
+
+  describe('removeInstrument', () => {
+    it('removes the instrument at the given index', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+      const initialCount = result.current.instruments.length;
+      const secondName = result.current.instruments[1].name;
+
+      act(() => { result.current.removeInstrument(0); });
+
+      expect(result.current.instruments).toHaveLength(initialCount - 1);
+      expect(result.current.instruments[0].name).toBe(secondName);
+    });
+
+    it('does not remove the last remaining instrument', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+      const count = result.current.instruments.length;
+
+      for (let i = 0; i < count; i++) {
+        act(() => { result.current.removeInstrument(0); });
+      }
+
+      expect(result.current.instruments).toHaveLength(1);
+    });
+
+    it('adjusts editingInstrumentIndex down when a preceding instrument is removed', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.setEditingInstrumentIndex(2); });
+      act(() => { result.current.removeInstrument(1); });
+
+      expect(result.current.editingInstrumentIndex).toBe(1);
+    });
+
+    it('clamps editingInstrumentIndex to 0 when the first instrument is removed', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.setEditingInstrumentIndex(0); });
+      act(() => { result.current.removeInstrument(0); });
+
+      expect(result.current.editingInstrumentIndex).toBe(0);
+    });
+
+    it('pushes history so the removal can be undone', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+      const initialCount = result.current.instruments.length;
+
+      act(() => { result.current.removeInstrument(0); });
+      expect(result.current.instruments).toHaveLength(initialCount - 1);
+
+      act(() => { result.current.undo(); });
+      expect(result.current.instruments).toHaveLength(initialCount);
+    });
+  });
+
+  describe('setChannelInstrument — updates existing notes', () => {
+    it('updates all notes in the channel to use the new instrument', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.enterNote(0, 1, 'D'); });
+      act(() => { result.current.setChannelInstrument(0, 1); });
+
+      expect(result.current.patterns[0].cells[0][0].instrument).toBe(1);
+      expect(result.current.patterns[0].cells[0][1].instrument).toBe(1);
+    });
+
+    it('does not change cells that have no note (null)', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      // row 1 stays empty
+      act(() => { result.current.setChannelInstrument(0, 1); });
+
+      expect(result.current.patterns[0].cells[0][1].note).toBeNull();
+      expect(result.current.patterns[0].cells[0][1].instrument).toBeNull();
+    });
+
+    it('does not affect other channels', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.enterNote(1, 0, 'E'); });
+      act(() => { result.current.setChannelInstrument(0, 2); });
+
+      expect(result.current.patterns[0].cells[1][0].instrument).toBe(0);
+    });
+
+    it('updates the channelInstrument state for future notes', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.setChannelInstrument(1, 3); });
+      act(() => { result.current.enterNote(1, 0, 'G'); });
+
+      expect(result.current.patterns[0].cells[1][0].instrument).toBe(3);
+    });
+
+    it('only updates the currently selected pattern', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.addPattern(); });
+      act(() => { result.current.setSelectedPatternIndex(1); });
+      act(() => { result.current.enterNote(0, 0, 'E'); });
+      // Switch back to pattern 0 and change instrument
+      act(() => { result.current.setSelectedPatternIndex(0); });
+      act(() => { result.current.setChannelInstrument(0, 2); });
+
+      expect(result.current.patterns[0].cells[0][0].instrument).toBe(2);
+      // Pattern 1 note should remain on instrument 0
+      expect(result.current.patterns[1].cells[0][0].instrument).toBe(0);
+    });
+
+    it('pushes history so the instrument change can be undone', () => {
+      const { result } = renderHook(() => useMusicSequencer());
+
+      act(() => { result.current.enterNote(0, 0, 'C'); });
+      act(() => { result.current.setChannelInstrument(0, 1); });
+      expect(result.current.patterns[0].cells[0][0].instrument).toBe(1);
+
+      act(() => { result.current.undo(); });
+      expect(result.current.patterns[0].cells[0][0].instrument).toBe(0);
     });
   });
 
