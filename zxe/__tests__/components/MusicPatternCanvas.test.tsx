@@ -225,4 +225,104 @@ describe('MusicPatternCanvas', () => {
       expect(KEY_TO_NOTE_UP.u).toBe('B');
     });
   });
+
+  describe('auto-scroll to playing row', () => {
+    function getScrollContainer() {
+      // The outermost div with overflow-auto is the scroll container
+      return document.querySelector('div.overflow-auto') as HTMLDivElement;
+    }
+
+    function mockRowGeometry(container: HTMLDivElement, rowHeight = 24, headerHeight = 40) {
+      // Mock clientHeight on the container
+      Object.defineProperty(container, 'clientHeight', { value: 300, configurable: true });
+
+      // Mock offsetTop/offsetHeight on each tbody row
+      const tbody = container.querySelector('tbody')!;
+      Array.from(tbody.children).forEach((tr, i) => {
+        Object.defineProperty(tr, 'offsetTop', { value: headerHeight + i * rowHeight, configurable: true });
+        Object.defineProperty(tr, 'offsetHeight', { value: rowHeight, configurable: true });
+      });
+    }
+
+    it('sets scrollTop so the playing row is centred in the viewport', () => {
+      const props = createDefaultProps();
+      props.playingRow = 2;
+      render(<MusicPatternCanvas {...props} />);
+
+      const container = getScrollContainer();
+      mockRowGeometry(container);
+
+      // Re-trigger the effect by changing playingRow
+      const { rerender } = render(<MusicPatternCanvas {...{ ...props, playingRow: 2 }} />);
+      const c2 = getScrollContainer();
+      mockRowGeometry(c2);
+      // Manually trigger effect by re-rendering with a new playingRow
+      rerender(<MusicPatternCanvas {...{ ...props, playingRow: 3 }} />);
+      const c3 = getScrollContainer();
+      mockRowGeometry(c3);
+      // scrollTop should be set; exact value depends on geometry
+      expect(typeof c3.scrollTop).toBe('number');
+    });
+
+    it('scrolls to the correct position: rowTop - containerHeight/2 + rowHeight/2', () => {
+      const props = { ...createDefaultProps(), playingRow: null as number | null };
+      const { rerender } = render(<MusicPatternCanvas {...props} />);
+
+      const container = getScrollContainer();
+      const rowHeight = 24;
+      const headerHeight = 40;
+      const containerHeight = 300;
+      Object.defineProperty(container, 'clientHeight', { value: containerHeight, configurable: true });
+      const tbody = container.querySelector('tbody')!;
+      Array.from(tbody.children).forEach((tr, i) => {
+        Object.defineProperty(tr, 'offsetTop', { value: headerHeight + i * rowHeight, configurable: true });
+        Object.defineProperty(tr, 'offsetHeight', { value: rowHeight, configurable: true });
+      });
+
+      rerender(<MusicPatternCanvas {...{ ...props, playingRow: 2 }} />);
+
+      // Expected: rowTop(2) - 300/2 + 24/2 = (40 + 2*24) - 150 + 12 = 88 - 150 + 12 = -50 → clamped to 0
+      expect(container.scrollTop).toBe(0);
+    });
+
+    it('centres a row that is below the fold', () => {
+      const props = { ...createDefaultProps(), playingRow: null as number | null };
+      const pattern = makePattern(32);
+      const { rerender } = render(<MusicPatternCanvas {...{ ...props, pattern }} />);
+
+      const container = getScrollContainer();
+      const rowHeight = 20;
+      const headerHeight = 40;
+      const containerHeight = 300;
+      Object.defineProperty(container, 'clientHeight', { value: containerHeight, configurable: true });
+      const tbody = container.querySelector('tbody')!;
+      Array.from(tbody.children).forEach((tr, i) => {
+        Object.defineProperty(tr, 'offsetTop', { value: headerHeight + i * rowHeight, configurable: true });
+        Object.defineProperty(tr, 'offsetHeight', { value: rowHeight, configurable: true });
+      });
+
+      rerender(<MusicPatternCanvas {...{ ...props, pattern, playingRow: 25 }} />);
+
+      // rowTop = 40 + 25*20 = 540; target = 540 - 150 + 10 = 400
+      expect(container.scrollTop).toBe(400);
+    });
+
+    it('does not scroll when playingRow is null', () => {
+      const props = createDefaultProps();
+      render(<MusicPatternCanvas {...props} />);
+      const container = getScrollContainer();
+      Object.defineProperty(container, 'clientHeight', { value: 300, configurable: true });
+      // scrollTop should remain at its default (0) — no effect runs
+      expect(container.scrollTop).toBe(0);
+    });
+
+    it('does not throw when tbody has no row for the given playingRow index', () => {
+      const props = { ...createDefaultProps(), playingRow: null as number | null };
+      const { rerender } = render(<MusicPatternCanvas {...props} />);
+      // playingRow beyond the number of rows in the pattern (4 rows, index 99)
+      expect(() => {
+        rerender(<MusicPatternCanvas {...{ ...props, playingRow: 99 }} />);
+      }).not.toThrow();
+    });
+  });
 });

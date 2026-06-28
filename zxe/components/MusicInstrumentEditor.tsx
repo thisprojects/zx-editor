@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MusicInstrument } from '@/types';
+import { NOTE_NAMES, noteToPeriod, MIN_OCTAVE, MAX_OCTAVE } from '@/constants';
+import { AYEmulator, buildMixer } from '@/utils/ayEmulator';
 
 interface MusicInstrumentEditorProps {
   instrument: MusicInstrument;
@@ -12,9 +14,81 @@ interface MusicInstrumentEditorProps {
 const STEP_WIDTH = 18;
 const BAR_MAX_HEIGHT = 80;
 
+const PREVIEW_RETRIGGER_TICKS = 150; // 3 seconds at 50Hz
+
 export function MusicInstrumentEditor({ instrument, onSetStep, onUpdate }: MusicInstrumentEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+
+  // Preview state
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewNote, setPreviewNote] = useState<(typeof NOTE_NAMES)[number]>('A');
+  const [previewOctave, setPreviewOctave] = useState(4);
+
+  // Refs to avoid stale closures in the tick interval
+  const instrumentRef = useRef(instrument);
+  const previewNoteRef = useRef(previewNote);
+  const previewOctaveRef = useRef(previewOctave);
+  const ayRef = useRef<AYEmulator | null>(null);
+  const previewTimerRef = useRef<number | null>(null);
+  const envStepRef = useRef(0);
+  const tickCountRef = useRef(0);
+
+  useEffect(() => { instrumentRef.current = instrument; }, [instrument]);
+  useEffect(() => { previewNoteRef.current = previewNote; }, [previewNote]);
+  useEffect(() => { previewOctaveRef.current = previewOctave; }, [previewOctave]);
+
+  const triggerNote = useCallback(() => {
+    const inst = instrumentRef.current;
+    const chip = ayRef.current!;
+    envStepRef.current = 0;
+    const period = noteToPeriod(previewNoteRef.current, previewOctaveRef.current);
+    chip.setTonePeriod(0, period);
+    if (inst.useNoise) chip.setNoisePeriod(inst.noisePeriod);
+    chip.setMixer(buildMixer({ tone: [true, false, false], noise: [inst.useNoise, false, false] }));
+  }, []);
+
+  const stopPreview = useCallback(() => {
+    if (previewTimerRef.current) {
+      window.clearInterval(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+    ayRef.current?.silence();
+    setIsPreviewing(false);
+  }, []);
+
+  const startPreview = useCallback(async () => {
+    if (!ayRef.current) ayRef.current = new AYEmulator();
+    await ayRef.current.resume();
+    tickCountRef.current = PREVIEW_RETRIGGER_TICKS; // trigger immediately on first tick
+    setIsPreviewing(true);
+
+    previewTimerRef.current = window.setInterval(() => {
+      const inst = instrumentRef.current;
+      const chip = ayRef.current!;
+
+      if (tickCountRef.current >= PREVIEW_RETRIGGER_TICKS) {
+        tickCountRef.current = 0;
+        triggerNote();
+      }
+      tickCountRef.current++;
+
+      // Advance envelope
+      const lastStep = inst.volumeEnvelope.length - 1;
+      const level = inst.volumeEnvelope[Math.min(envStepRef.current, lastStep)] ?? 0;
+      const next = envStepRef.current + 1;
+      envStepRef.current = next > lastStep ? Math.min(inst.loopStart, lastStep) : next;
+      chip.setVolume(0, level, inst.useToneEnvelope);
+    }, 1000 / 50);
+  }, [triggerNote]);
+
+  const togglePreview = useCallback(() => {
+    if (isPreviewing) stopPreview();
+    else startPreview();
+  }, [isPreviewing, stopPreview, startPreview]);
+
+  // Stop preview when component unmounts
+  useEffect(() => () => stopPreview(), [stopPreview]);
 
   const setFromPointer = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -69,6 +143,39 @@ export function MusicInstrumentEditor({ instrument, onSetStep, onUpdate }: Music
             />
           </label>
         )}
+      </div>
+
+      {/* Preview controls */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={togglePreview}
+          className={`px-3 py-1 rounded text-xs font-medium ${
+            isPreviewing
+              ? 'bg-red-600 hover:bg-red-500 text-white'
+              : 'bg-green-700 hover:bg-green-600 text-white'
+          }`}
+        >
+          {isPreviewing ? '■ Stop' : '▶ Preview'}
+        </button>
+        <select
+          value={previewNote}
+          onChange={(e) => setPreviewNote(e.target.value as (typeof NOTE_NAMES)[number])}
+          className="bg-gray-700 text-white text-xs rounded px-1 py-1"
+        >
+          {NOTE_NAMES.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+        <select
+          value={previewOctave}
+          onChange={(e) => setPreviewOctave(Number(e.target.value))}
+          className="bg-gray-700 text-white text-xs rounded px-1 py-1"
+        >
+          {Array.from({ length: MAX_OCTAVE - MIN_OCTAVE + 1 }, (_, i) => MIN_OCTAVE + i).map((o) => (
+            <option key={o} value={o}>{o}</option>
+          ))}
+        </select>
+        <span className="text-xs text-gray-400">every 3s</span>
       </div>
 
       <div className="text-xs text-gray-400">

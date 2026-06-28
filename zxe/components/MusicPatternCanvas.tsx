@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { MusicCell, MusicInstrument, MusicPattern, NoteName, NOTE_OFF } from '@/types';
 import { MIN_OCTAVE, MAX_OCTAVE } from '@/constants';
 
@@ -57,8 +57,24 @@ export function MusicPatternCanvas({
     [onSetCursor]
   );
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (playingRow === null || !scrollRef.current) return;
+    const container = scrollRef.current;
+    const tbody = container.querySelector('tbody');
+    if (!tbody) return;
+    const tr = tbody.children[playingRow] as HTMLElement | undefined;
+    if (!tr) return;
+    const containerHeight = container.clientHeight;
+    const rowTop = tr.offsetTop;
+    const rowHeight = tr.offsetHeight;
+    const target = rowTop - containerHeight / 2 + rowHeight / 2;
+    container.scrollTop = Math.max(0, target);
+  }, [playingRow]);
+
   return (
-    <div className="font-mono text-sm bg-gray-900 border border-gray-700 rounded overflow-auto max-h-[600px]">
+    <div ref={scrollRef} className="font-mono text-sm bg-gray-900 border border-gray-700 rounded overflow-auto max-h-[600px]">
       <table className="w-full border-collapse">
         <thead className="sticky top-0 bg-gray-800 z-20">
           <tr>
