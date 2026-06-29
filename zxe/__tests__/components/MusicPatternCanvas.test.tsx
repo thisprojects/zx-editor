@@ -41,6 +41,7 @@ const createDefaultProps = () => ({
   onEnterNote: jest.fn(),
   onEnterNoteOff: jest.fn(),
   onClearCell: jest.fn(),
+  onSetCell: jest.fn(),
 });
 
 describe('MusicPatternCanvas', () => {
@@ -223,6 +224,291 @@ describe('MusicPatternCanvas', () => {
     it('maps the upper octave keys to notes', () => {
       expect(KEY_TO_NOTE_UP.q).toBe('C');
       expect(KEY_TO_NOTE_UP.u).toBe('B');
+    });
+  });
+
+  describe('edit cell popover', () => {
+    function patternWithNote(note = 'C', octave = 4, instrument = 0, volume: number | null = null): MusicPattern {
+      const p = makePattern();
+      p.cells[0][0] = makeCell({ note: note as MusicCell['note'], octave, instrument, volume, effect: 'none', effectParam: 0 });
+      return p;
+    }
+
+    it('does not show the popover on initial render', () => {
+      render(<MusicPatternCanvas {...createDefaultProps()} />);
+      expect(screen.queryByText('Edit Cell')).not.toBeInTheDocument();
+    });
+
+    it('does not open the popover when clicking an empty cell', () => {
+      render(<MusicPatternCanvas {...createDefaultProps()} />);
+      const cells = screen.getAllByText('...');
+      fireEvent.click(cells[0].closest('td')!);
+      expect(screen.queryByText('Edit Cell')).not.toBeInTheDocument();
+    });
+
+    it('opens the popover when clicking a cell with a note', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      const noteCell = screen.getByText('C4').closest('td')!;
+      fireEvent.click(noteCell);
+      expect(screen.getByText('Edit Cell')).toBeInTheDocument();
+    });
+
+    it('opens the popover when clicking a note-off cell', () => {
+      const props = createDefaultProps();
+      props.pattern.cells[0][0] = makeCell({ note: 'OFF' });
+      render(<MusicPatternCanvas {...props} />);
+      const offCell = screen.getByText('---').closest('td')!;
+      fireEvent.click(offCell);
+      expect(screen.getByText('Edit Cell')).toBeInTheDocument();
+    });
+
+    it('shows all six field labels in the popover', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByText('Note')).toBeInTheDocument();
+      expect(screen.getByText('Octave')).toBeInTheDocument();
+      expect(screen.getByText('Instrument')).toBeInTheDocument();
+      expect(screen.getByText('Volume')).toBeInTheDocument();
+      expect(screen.getByText('Effect')).toBeInTheDocument();
+      expect(screen.getByText('Param')).toBeInTheDocument();
+    });
+
+    it('populates the note dropdown with the current note value', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('G', 3) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('G3').closest('td')!);
+      const noteSelects = screen.getAllByDisplayValue('G');
+      expect(noteSelects.length).toBeGreaterThan(0);
+    });
+
+    it('populates the octave dropdown with the current octave value', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 6) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C6').closest('td')!);
+      // The popover octave select — find among selects that show '6'
+      const octaveSelects = screen.getAllByDisplayValue('6');
+      expect(octaveSelects.length).toBeGreaterThan(0);
+    });
+
+    it('populates the instrument dropdown with the current instrument', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 4, 1) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByDisplayValue('1: Bass')).toBeInTheDocument();
+    });
+
+    it('populates the volume dropdown with the current volume when set', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 4, 0, 8) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByDisplayValue('8 (8)')).toBeInTheDocument();
+    });
+
+    it('shows volume as default when volume is null', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 4, 0, null) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByDisplayValue('. (default)')).toBeInTheDocument();
+    });
+
+    it('calls onSetCell with updated note when note dropdown changes', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const noteSelects = screen.getAllByDisplayValue('C');
+      fireEvent.change(noteSelects[noteSelects.length - 1], { target: { value: 'G' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { note: 'G' });
+    });
+
+    it('calls onSetCell with null note when empty option selected', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const noteSelects = screen.getAllByDisplayValue('C');
+      fireEvent.change(noteSelects[noteSelects.length - 1], { target: { value: '' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { note: null, octave: 4 });
+    });
+
+    it('calls onSetCell with NOTE_OFF when note-off option selected', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const noteSelects = screen.getAllByDisplayValue('C');
+      fireEvent.change(noteSelects[noteSelects.length - 1], { target: { value: 'OFF' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { note: 'OFF' });
+    });
+
+    it('calls onSetCell with updated octave when octave dropdown changes', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 4) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      // Octave dropdowns: find the one inside the popover (last one with value 4)
+      const octaveSelects = screen.getAllByDisplayValue('4');
+      fireEvent.change(octaveSelects[octaveSelects.length - 1], { target: { value: '7' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { octave: 7 });
+    });
+
+    it('calls onSetCell with updated instrument when instrument dropdown changes', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const instLabel = screen.getByText('Instrument');
+      const instSelect = instLabel.closest('label')!.querySelector('select')!;
+      fireEvent.change(instSelect, { target: { value: '1' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { instrument: 1 });
+    });
+
+    it('calls onSetCell with null instrument when default option selected', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const instLabel = screen.getByText('Instrument');
+      const instSelect = instLabel.closest('label')!.querySelector('select')!;
+      fireEvent.change(instSelect, { target: { value: '' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { instrument: null });
+    });
+
+    it('calls onSetCell with updated volume when volume dropdown changes', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      fireEvent.change(screen.getByDisplayValue('. (default)'), { target: { value: '12' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { volume: 12 });
+    });
+
+    it('calls onSetCell with null volume when default option selected', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote('C', 4, 0, 5) };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      fireEvent.change(screen.getByDisplayValue('5 (5)'), { target: { value: '' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { volume: null });
+    });
+
+    it('calls onSetCell with updated effect when effect dropdown changes', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      fireEvent.change(screen.getByDisplayValue('none'), { target: { value: 'arpeggio' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { effect: 'arpeggio' });
+    });
+
+    it('calls onSetCell with updated effectParam when param dropdown changes', () => {
+      const props = createDefaultProps();
+      props.pattern.cells[0][0] = makeCell({ note: 'C', octave: 4, instrument: 0, effect: 'slide_up', effectParam: 0 });
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      fireEvent.change(screen.getByDisplayValue('0'), { target: { value: '16' } });
+      expect(props.onSetCell).toHaveBeenCalledWith(0, 0, { effectParam: 16 });
+    });
+
+    it('disables octave, instrument, volume, effect and param dropdowns for a note-off cell', () => {
+      const props = createDefaultProps();
+      props.pattern.cells[0][0] = makeCell({ note: 'OFF' });
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('---').closest('td')!);
+      const popover = screen.getByText('Edit Cell').closest('div[class*="bg-gray-800"]')!;
+      const octSelect = popover.querySelector('label span')!.closest('label')!.querySelector('select')!;
+      const allSelects = Array.from(popover.querySelectorAll('select'));
+      // octave, instrument, volume, effect selects should all be disabled (all except note)
+      const [, octave, instrument, volume, effect] = allSelects;
+      expect(octave).toBeDisabled();
+      expect(instrument).toBeDisabled();
+      expect(volume).toBeDisabled();
+      expect(effect).toBeDisabled();
+    });
+
+    it('closes the popover when clicking outside', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByText('Edit Cell')).toBeInTheDocument();
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByText('Edit Cell')).not.toBeInTheDocument();
+    });
+
+    it('closes the popover on right-click (clear) of a cell', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      expect(screen.getByText('Edit Cell')).toBeInTheDocument();
+      fireEvent.contextMenu(screen.getByText('C4').closest('td')!);
+      expect(screen.queryByText('Edit Cell')).not.toBeInTheDocument();
+    });
+
+    it('highlights the cell being edited with an amber background', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      const noteCell = screen.getByText('C4').closest('td')!;
+      fireEvent.click(noteCell);
+      expect(noteCell.className).toContain('bg-yellow-700');
+    });
+
+    it('note dropdown contains all 12 chromatic notes plus empty and note-off options', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      // Find the note select inside the popover by its label
+      const noteLabel = screen.getByText('Note');
+      const noteSelect = noteLabel.closest('label')!.querySelector('select')!;
+      const options = Array.from(noteSelect.options).map((o) => o.value);
+      expect(options).toContain('');
+      expect(options).toContain('OFF');
+      ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].forEach((n) => {
+        expect(options).toContain(n);
+      });
+      expect(options).toHaveLength(14); // 12 notes + empty + OFF
+    });
+
+    it('volume dropdown contains all 16 values (0–F) plus default', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const volLabel = screen.getByText('Volume');
+      const volSelect = volLabel.closest('label')!.querySelector('select')!;
+      expect(volSelect.options).toHaveLength(17); // 16 values + default
+    });
+
+    it('octave dropdown contains all values from MIN_OCTAVE to MAX_OCTAVE', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const octLabel = screen.getByText('Octave');
+      const octSelect = octLabel.closest('label')!.querySelector('select')!;
+      const values = Array.from(octSelect.options).map((o) => Number(o.value));
+      expect(values[0]).toBe(0); // MIN_OCTAVE
+      expect(values[values.length - 1]).toBe(7); // MAX_OCTAVE
+      expect(values).toHaveLength(8);
+    });
+
+    it('effect dropdown contains all four effect values', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const fxLabel = screen.getByText('Effect');
+      const fxSelect = fxLabel.closest('label')!.querySelector('select')!;
+      const values = Array.from(fxSelect.options).map((o) => o.value);
+      expect(values).toEqual(['none', 'arpeggio', 'slide_up', 'slide_down']);
+    });
+
+    it('param dropdown is disabled when effect is none', () => {
+      const props = { ...createDefaultProps(), pattern: patternWithNote() };
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const paramLabel = screen.getByText('Param');
+      const paramSelect = paramLabel.closest('label')!.querySelector('select')!;
+      expect(paramSelect).toBeDisabled();
+    });
+
+    it('param dropdown is enabled when effect is not none', () => {
+      const props = createDefaultProps();
+      props.pattern.cells[0][0] = makeCell({ note: 'C', octave: 4, instrument: 0, effect: 'arpeggio', effectParam: 0 });
+      render(<MusicPatternCanvas {...props} />);
+      fireEvent.click(screen.getByText('C4').closest('td')!);
+      const paramLabel = screen.getByText('Param');
+      const paramSelect = paramLabel.closest('label')!.querySelector('select')!;
+      expect(paramSelect).not.toBeDisabled();
     });
   });
 

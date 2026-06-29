@@ -170,6 +170,7 @@ export default function MusicEditorPage() {
               onEnterNote={seq.enterNote}
               onEnterNoteOff={seq.enterNoteOff}
               onClearCell={seq.clearCell}
+              onSetCell={seq.setCell}
             />
           </div>
 
